@@ -1,0 +1,1 @@
+How do systems implementing 2PL handle long-running transactions to avoid excessive lock contention and potential impact on the throughput and concurrency of shorter transactions? 

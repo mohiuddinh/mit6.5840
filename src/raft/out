@@ -1,0 +1,332 @@
+Test (3B): basic agreement ...
+2024/02/04 13:50:11 In start, but not leader, so returning:  1
+2024/02/04 13:50:11 In start, but not leader, so returning:  2
+2024/02/04 13:50:11 In start, but not leader, so returning:  0
+2024/02/04 13:50:11 In start, but not leader, so returning:  1
+2024/02/04 13:50:11 In start, but not leader, so returning:  2
+2024/02/04 13:50:11 In start, but not leader, so returning:  0
+2024/02/04 13:50:11 In start, but not leader, so returning:  1
+2024/02/04 13:50:11 In start, but not leader, so returning:  2
+2024/02/04 13:50:11 In start, but not leader, so returning:  0
+2024/02/04 13:50:11 1  is follower and timed out, so becoming candidate
+2024/02/04 13:50:11 1  became candidate
+2024/02/04 13:50:11 2  gave vote to  1
+2024/02/04 13:50:11 0  gave vote to  1
+2024/02/04 13:50:11 1  became candidate and won
+2024/02/04 13:50:11 1  is leader and sending heartbeat
+2024/02/04 13:50:11 1  sending append entry to  0
+2024/02/04 13:50:11 1  sending append entry to  2
+2024/02/04 13:50:11 2  received heartbeat from  1
+2024/02/04 13:50:11 0  received heartbeat from  1
+2024/02/04 13:50:11 in sendappendentry, reply is success; my id is:  1  response was from  2  and their nextidx and matchidx is  [1 1 1] [0 0 0]
+2024/02/04 13:50:11 in sendappendentry, reply is success; my id is:  1  response was from  0  and their nextidx and matchidx is  [1 1 1] [0 0 0]
+2024/02/04 13:50:11 In start, and am leader, so adding to my log 1
+2024/02/04 13:50:11 1  is leader and sending heartbeat
+2024/02/04 13:50:11 1  sending append entry to  0
+2024/02/04 13:50:11 1  sending append entry to  2
+2024/02/04 13:50:11 2  received heartbeat from  1
+2024/02/04 13:50:11 0  received heartbeat from  1
+2024/02/04 13:50:11 in sendappendentry, reply is success; my id is:  1  response was from  2  and their nextidx and matchidx is  [1 1 1] [0 1 0]
+2024/02/04 13:50:11 2 1 [0 1 1] 1
+2024/02/04 13:50:11 got enough votes, applying messages  1 1 [0 1 1]
+2024/02/04 13:50:11 Applying message: rf.me message  1 {true 100 1 false [] 0 0}
+2024/02/04 13:50:11 in sendappendentry, reply is success; my id is:  1  response was from  0  and their nextidx and matchidx is  [1 1 2] [0 1 1]
+2024/02/04 13:50:11 1  is leader and sending heartbeat
+2024/02/04 13:50:11 1  sending append entry to  0
+2024/02/04 13:50:11 1  sending append entry to  2
+2024/02/04 13:50:11 0  received heartbeat from  1
+2024/02/04 13:50:11 2  received heartbeat from  1
+2024/02/04 13:50:11 Applying message: rf.me message  0 {true 100 1 false [] 0 0}
+2024/02/04 13:50:11 Applying message: rf.me message  2 {true 100 1 false [] 0 0}
+2024/02/04 13:50:11 in sendappendentry, reply is success; my id is:  1  response was from  0  and their nextidx and matchidx is  [2 1 2] [1 1 1]
+2024/02/04 13:50:11 in sendappendentry, reply is success; my id is:  1  response was from  2  and their nextidx and matchidx is  [2 1 2] [1 1 1]
+2024/02/04 13:50:11 In start, and am leader, so adding to my log 1
+2024/02/04 13:50:11 1  is leader and sending heartbeat
+2024/02/04 13:50:11 2  is follower and timed out, so becoming candidate
+2024/02/04 13:50:11 2  became candidate
+2024/02/04 13:50:11 1  sending append entry to  0
+2024/02/04 13:50:11 1  sending append entry to  2
+2024/02/04 13:50:11 in processappend, my term is bigger:  2
+2024/02/04 13:50:11 0  gave vote to  2
+2024/02/04 13:50:11 in processappend, my term is bigger:  0
+2024/02/04 13:50:11 2  became candidate and won
+2024/02/04 13:50:11 in sendappendentry, received bad info and returning early:  1
+2024/02/04 13:50:11 2  is leader and sending heartbeat
+2024/02/04 13:50:11 in sendappendentry, received bad info and returning early:  1
+2024/02/04 13:50:11 2  sending append entry to  0
+2024/02/04 13:50:11 2  sending append entry to  1
+2024/02/04 13:50:11 0  received heartbeat from  2
+2024/02/04 13:50:11 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [0 0 0]
+2024/02/04 13:50:11 1  received heartbeat from  2
+2024/02/04 13:50:11 2  is leader and sending heartbeat
+2024/02/04 13:50:11 2  sending append entry to  0
+2024/02/04 13:50:11 2  sending append entry to  1
+2024/02/04 13:50:11 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 0 0]
+2024/02/04 13:50:11 0  received heartbeat from  2
+2024/02/04 13:50:11 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:11 1  received heartbeat from  2
+2024/02/04 13:50:11 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:11 2  is leader and sending heartbeat
+2024/02/04 13:50:11 2  sending append entry to  0
+2024/02/04 13:50:11 2  sending append entry to  1
+2024/02/04 13:50:11 0  received heartbeat from  2
+2024/02/04 13:50:11 1  received heartbeat from  2
+2024/02/04 13:50:11 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:11 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:11 2  is leader and sending heartbeat
+2024/02/04 13:50:11 2  sending append entry to  0
+2024/02/04 13:50:11 2  sending append entry to  1
+2024/02/04 13:50:11 0  received heartbeat from  2
+2024/02/04 13:50:11 1  received heartbeat from  2
+2024/02/04 13:50:11 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:11 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 2  is leader and sending heartbeat
+2024/02/04 13:50:12 2  sending append entry to  0
+2024/02/04 13:50:12 2  sending append entry to  1
+2024/02/04 13:50:12 1  received heartbeat from  2
+2024/02/04 13:50:12 0  received heartbeat from  2
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 2  is leader and sending heartbeat
+2024/02/04 13:50:12 2  sending append entry to  0
+2024/02/04 13:50:12 2  sending append entry to  1
+2024/02/04 13:50:12 0  received heartbeat from  2
+2024/02/04 13:50:12 1  received heartbeat from  2
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 2  is leader and sending heartbeat
+2024/02/04 13:50:12 2  sending append entry to  0
+2024/02/04 13:50:12 2  sending append entry to  1
+2024/02/04 13:50:12 0  received heartbeat from  2
+2024/02/04 13:50:12 1  received heartbeat from  2
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 2  is leader and sending heartbeat
+2024/02/04 13:50:12 2  sending append entry to  0
+2024/02/04 13:50:12 2  sending append entry to  1
+2024/02/04 13:50:12 0  received heartbeat from  2
+2024/02/04 13:50:12 1  received heartbeat from  2
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 2  is leader and sending heartbeat
+2024/02/04 13:50:12 2  sending append entry to  0
+2024/02/04 13:50:12 2  sending append entry to  1
+2024/02/04 13:50:12 1  received heartbeat from  2
+2024/02/04 13:50:12 0  received heartbeat from  2
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 2  is leader and sending heartbeat
+2024/02/04 13:50:12 2  sending append entry to  0
+2024/02/04 13:50:12 2  sending append entry to  1
+2024/02/04 13:50:12 1  received heartbeat from  2
+2024/02/04 13:50:12 0  received heartbeat from  2
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 2  is leader and sending heartbeat
+2024/02/04 13:50:12 2  sending append entry to  0
+2024/02/04 13:50:12 2  sending append entry to  1
+2024/02/04 13:50:12 1  received heartbeat from  2
+2024/02/04 13:50:12 0  received heartbeat from  2
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 2  is leader and sending heartbeat
+2024/02/04 13:50:12 2  sending append entry to  0
+2024/02/04 13:50:12 2  sending append entry to  1
+2024/02/04 13:50:12 1  received heartbeat from  2
+2024/02/04 13:50:12 0  received heartbeat from  2
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 2  is leader and sending heartbeat
+2024/02/04 13:50:12 2  sending append entry to  0
+2024/02/04 13:50:12 2  sending append entry to  1
+2024/02/04 13:50:12 1  received heartbeat from  2
+2024/02/04 13:50:12 0  received heartbeat from  2
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 2  is leader and sending heartbeat
+2024/02/04 13:50:12 2  sending append entry to  0
+2024/02/04 13:50:12 2  sending append entry to  1
+2024/02/04 13:50:12 1  received heartbeat from  2
+2024/02/04 13:50:12 0  received heartbeat from  2
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 2  is leader and sending heartbeat
+2024/02/04 13:50:12 2  sending append entry to  0
+2024/02/04 13:50:12 2  sending append entry to  1
+2024/02/04 13:50:12 0  received heartbeat from  2
+2024/02/04 13:50:12 1  received heartbeat from  2
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 2  is leader and sending heartbeat
+2024/02/04 13:50:12 2  sending append entry to  0
+2024/02/04 13:50:12 2  sending append entry to  1
+2024/02/04 13:50:12 1  received heartbeat from  2
+2024/02/04 13:50:12 0  received heartbeat from  2
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 2  is leader and sending heartbeat
+2024/02/04 13:50:12 2  sending append entry to  0
+2024/02/04 13:50:12 2  sending append entry to  1
+2024/02/04 13:50:12 0  received heartbeat from  2
+2024/02/04 13:50:12 1  received heartbeat from  2
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 2  is leader and sending heartbeat
+2024/02/04 13:50:12 2  sending append entry to  0
+2024/02/04 13:50:12 2  sending append entry to  1
+2024/02/04 13:50:12 1  received heartbeat from  2
+2024/02/04 13:50:12 0  received heartbeat from  2
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 2  is leader and sending heartbeat
+2024/02/04 13:50:12 2  sending append entry to  0
+2024/02/04 13:50:12 2  sending append entry to  1
+2024/02/04 13:50:12 1  received heartbeat from  2
+2024/02/04 13:50:12 0  received heartbeat from  2
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 2  is leader and sending heartbeat
+2024/02/04 13:50:12 2  sending append entry to  0
+2024/02/04 13:50:12 2  sending append entry to  1
+2024/02/04 13:50:12 1  received heartbeat from  2
+2024/02/04 13:50:12 0  received heartbeat from  2
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 2  is leader and sending heartbeat
+2024/02/04 13:50:12 2  sending append entry to  0
+2024/02/04 13:50:12 2  sending append entry to  1
+2024/02/04 13:50:12 1  received heartbeat from  2
+2024/02/04 13:50:12 0  received heartbeat from  2
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 2  is leader and sending heartbeat
+2024/02/04 13:50:12 2  sending append entry to  0
+2024/02/04 13:50:12 2  sending append entry to  1
+2024/02/04 13:50:12 1  received heartbeat from  2
+2024/02/04 13:50:12 0  received heartbeat from  2
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 2  is leader and sending heartbeat
+2024/02/04 13:50:12 2  sending append entry to  0
+2024/02/04 13:50:12 2  sending append entry to  1
+2024/02/04 13:50:12 0  received heartbeat from  2
+2024/02/04 13:50:12 1  received heartbeat from  2
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:12 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 2  is leader and sending heartbeat
+2024/02/04 13:50:13 2  sending append entry to  0
+2024/02/04 13:50:13 2  sending append entry to  1
+2024/02/04 13:50:13 0  received heartbeat from  2
+2024/02/04 13:50:13 1  received heartbeat from  2
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 2  is leader and sending heartbeat
+2024/02/04 13:50:13 2  sending append entry to  0
+2024/02/04 13:50:13 2  sending append entry to  1
+2024/02/04 13:50:13 1  received heartbeat from  2
+2024/02/04 13:50:13 0  received heartbeat from  2
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 2  is leader and sending heartbeat
+2024/02/04 13:50:13 2  sending append entry to  0
+2024/02/04 13:50:13 2  sending append entry to  1
+2024/02/04 13:50:13 0  received heartbeat from  2
+2024/02/04 13:50:13 1  received heartbeat from  2
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 2  is leader and sending heartbeat
+2024/02/04 13:50:13 2  sending append entry to  0
+2024/02/04 13:50:13 2  sending append entry to  1
+2024/02/04 13:50:13 1  received heartbeat from  2
+2024/02/04 13:50:13 0  received heartbeat from  2
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 2  is leader and sending heartbeat
+2024/02/04 13:50:13 2  sending append entry to  0
+2024/02/04 13:50:13 2  sending append entry to  1
+2024/02/04 13:50:13 0  received heartbeat from  2
+2024/02/04 13:50:13 1  received heartbeat from  2
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 2  is leader and sending heartbeat
+2024/02/04 13:50:13 2  sending append entry to  0
+2024/02/04 13:50:13 2  sending append entry to  1
+2024/02/04 13:50:13 0  received heartbeat from  2
+2024/02/04 13:50:13 1  received heartbeat from  2
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 2  is leader and sending heartbeat
+2024/02/04 13:50:13 2  sending append entry to  0
+2024/02/04 13:50:13 2  sending append entry to  1
+2024/02/04 13:50:13 0  received heartbeat from  2
+2024/02/04 13:50:13 1  received heartbeat from  2
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 2  is leader and sending heartbeat
+2024/02/04 13:50:13 2  sending append entry to  0
+2024/02/04 13:50:13 2  sending append entry to  1
+2024/02/04 13:50:13 1  received heartbeat from  2
+2024/02/04 13:50:13 0  received heartbeat from  2
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 2  is leader and sending heartbeat
+2024/02/04 13:50:13 2  sending append entry to  0
+2024/02/04 13:50:13 2  sending append entry to  1
+2024/02/04 13:50:13 1  received heartbeat from  2
+2024/02/04 13:50:13 0  received heartbeat from  2
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 2  is leader and sending heartbeat
+2024/02/04 13:50:13 2  sending append entry to  0
+2024/02/04 13:50:13 2  sending append entry to  1
+2024/02/04 13:50:13 0  received heartbeat from  2
+2024/02/04 13:50:13 1  received heartbeat from  2
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 2  is leader and sending heartbeat
+2024/02/04 13:50:13 2  sending append entry to  0
+2024/02/04 13:50:13 2  sending append entry to  1
+2024/02/04 13:50:13 0  received heartbeat from  2
+2024/02/04 13:50:13 1  received heartbeat from  2
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 2  is leader and sending heartbeat
+2024/02/04 13:50:13 2  sending append entry to  0
+2024/02/04 13:50:13 2  sending append entry to  1
+2024/02/04 13:50:13 0  received heartbeat from  2
+2024/02/04 13:50:13 1  received heartbeat from  2
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 2  is leader and sending heartbeat
+2024/02/04 13:50:13 2  sending append entry to  0
+2024/02/04 13:50:13 2  sending append entry to  1
+2024/02/04 13:50:13 0  received heartbeat from  2
+2024/02/04 13:50:13 1  received heartbeat from  2
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 2  is leader and sending heartbeat
+2024/02/04 13:50:13 2  sending append entry to  0
+2024/02/04 13:50:13 2  sending append entry to  1
+2024/02/04 13:50:13 1  received heartbeat from  2
+2024/02/04 13:50:13 0  received heartbeat from  2
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 2  is leader and sending heartbeat
+2024/02/04 13:50:13 2  sending append entry to  0
+2024/02/04 13:50:13 2  sending append entry to  1
+2024/02/04 13:50:13 1  received heartbeat from  2
+2024/02/04 13:50:13 0  received heartbeat from  2
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 2  is leader and sending heartbeat
+2024/02/04 13:50:13 2  sending append entry to  0
+2024/02/04 13:50:13 2  sending append entry to  1
+2024/02/04 13:50:13 1  received heartbeat from  2
+2024/02/04 13:50:13 0  received heartbeat from  2
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  1  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+2024/02/04 13:50:13 in sendappendentry, reply is success; my id is:  2  response was from  0  and their nextidx and matchidx is  [2 2 2] [1 1 0]
+--- FAIL: TestBasicAgree3B (2.22s)
+    config.go:594: one(200) failed to reach agreement
+FAIL
+exit status 1
+FAIL	6.5840/raft	2.541s

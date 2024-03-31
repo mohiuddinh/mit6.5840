@@ -1,0 +1,1 @@
+Suppose at t0, x=10. Then, a get, get, put(x = 20) are issued concurrently. It is possible the first get(x) returns 10 and the second returns 20. This would be linearizable. 

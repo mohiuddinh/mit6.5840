@@ -14,6 +14,7 @@ import "time"
 import "math/rand"
 import "sync/atomic"
 import "sync"
+// import "log"
 
 // The tester generously allows solutions to complete elections in one second
 // (much more than the paper's range of timeouts).
@@ -315,6 +316,10 @@ func TestFailNoAgree3B(t *testing.T) {
 	cfg.disconnect((leader + 2) % servers)
 	cfg.disconnect((leader + 3) % servers)
 
+	// log.Println()
+	// log.Println("3 DISCONNECTED! ", (leader + 1) % servers, (leader + 2) % servers, (leader + 3) % servers)
+	// log.Println()
+
 	index, _, ok := cfg.rafts[leader].Start(20)
 	if ok != true {
 		t.Fatalf("leader rejected Start()")
@@ -334,6 +339,10 @@ func TestFailNoAgree3B(t *testing.T) {
 	cfg.connect((leader + 1) % servers)
 	cfg.connect((leader + 2) % servers)
 	cfg.connect((leader + 3) % servers)
+
+	// log.Println()
+	// log.Println("3 ARE BACK")
+	// log.Println()
 
 	// the disconnected majority may have chosen a leader from
 	// among their own ranks, forgetting index 2.
@@ -505,6 +514,8 @@ func TestBackup3B(t *testing.T) {
 	cfg.disconnect((leader1 + 3) % servers)
 	cfg.disconnect((leader1 + 4) % servers)
 
+	// log.Println("DISCONNECTING THREE NODES!!!!!!!!!!")
+
 	// submit lots of commands that won't commit
 	for i := 0; i < 50; i++ {
 		cfg.rafts[leader1].Start(rand.Int())
@@ -515,10 +526,14 @@ func TestBackup3B(t *testing.T) {
 	cfg.disconnect((leader1 + 0) % servers)
 	cfg.disconnect((leader1 + 1) % servers)
 
+	// log.Println("DISCONNECTING REMAINING TWO!!!!!!!!!!")
+
 	// allow other partition to recover
 	cfg.connect((leader1 + 2) % servers)
 	cfg.connect((leader1 + 3) % servers)
 	cfg.connect((leader1 + 4) % servers)
+
+	// log.Println("RECONNECTING INITIAL THREE!!!!!!")
 
 	// lots of successful commands to new group.
 	for i := 0; i < 50; i++ {
@@ -532,6 +547,8 @@ func TestBackup3B(t *testing.T) {
 		other = (leader2 + 1) % servers
 	}
 	cfg.disconnect(other)
+
+	// log.Println("ANOTHER PARTITION WITH LEADER AND ONE!!!!")
 
 	// lots more commands that won't commit
 	for i := 0; i < 50; i++ {
@@ -548,6 +565,8 @@ func TestBackup3B(t *testing.T) {
 	cfg.connect((leader1 + 1) % servers)
 	cfg.connect(other)
 
+	// log.Println("RECONNECTING INITIAL LEADER AGAIN!!!!!!")
+
 	// lots of successful commands to new group.
 	for i := 0; i < 50; i++ {
 		cfg.one(rand.Int(), 3, true)
@@ -557,6 +576,7 @@ func TestBackup3B(t *testing.T) {
 	for i := 0; i < servers; i++ {
 		cfg.connect(i)
 	}
+	// log.Println("RECONNECT EVERYONE")
 	cfg.one(rand.Int(), servers, true)
 
 	cfg.end()
@@ -1107,6 +1127,7 @@ func snapcommon(t *testing.T, name string, disconnect bool, reliable bool, crash
 
 	cfg.one(rand.Int(), servers, true)
 	leader1 := cfg.checkOneLeader()
+	// fmt.Println("LEADER1 DISCONNECT RELIABLE CRASH ", leader1, disconnect, reliable, crash)
 
 	for i := 0; i < iters; i++ {
 		victim := (leader1 + 1) % servers
@@ -1115,6 +1136,7 @@ func snapcommon(t *testing.T, name string, disconnect bool, reliable bool, crash
 			sender = (leader1 + 1) % servers
 			victim = leader1
 		}
+		fmt.Println("STARTING ITER ", i, " with victim ", victim)
 
 		if disconnect {
 			cfg.disconnect(victim)
@@ -1127,6 +1149,7 @@ func snapcommon(t *testing.T, name string, disconnect bool, reliable bool, crash
 
 		// perhaps send enough to get a snapshot
 		nn := (SnapShotInterval / 2) + (rand.Int() % SnapShotInterval)
+		// fmt.Println("HERE IS NN: ", nn)
 		for i := 0; i < nn; i++ {
 			cfg.rafts[sender].Start(rand.Int())
 		}
@@ -1136,6 +1159,7 @@ func snapcommon(t *testing.T, name string, disconnect bool, reliable bool, crash
 			// make sure all followers have caught up, so that
 			// an InstallSnapshot RPC isn't required for
 			// TestSnapshotBasic3D().
+			// fmt.Println("trying to make sure all followers have caught up??")
 			cfg.one(rand.Int(), servers, true)
 		} else {
 			cfg.one(rand.Int(), servers-1, true)
@@ -1152,6 +1176,7 @@ func snapcommon(t *testing.T, name string, disconnect bool, reliable bool, crash
 			leader1 = cfg.checkOneLeader()
 		}
 		if crash {
+			fmt.Println("Restarting victim! ", victim)
 			cfg.start1(victim, cfg.applierSnap)
 			cfg.connect(victim)
 			cfg.one(rand.Int(), servers, true)

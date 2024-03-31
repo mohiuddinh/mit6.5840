@@ -1,0 +1,1 @@
+How long did it take to develop go (from idea inception to first public launch)? What were some of the difficulties? Do a lot of teams at google use Go? 

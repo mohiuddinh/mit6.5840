@@ -1,0 +1,1 @@
+When a write is issued, it blocks until it's sent to each of the backups. When a read is sent to C, the previous writes that the read depends on are committed -- and then we respond to the client. 
