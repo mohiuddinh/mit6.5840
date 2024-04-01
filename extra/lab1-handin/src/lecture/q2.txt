@@ -1,1 +1,0 @@
-What is the best way to handle errors in go? What paradigm to raise errors? 

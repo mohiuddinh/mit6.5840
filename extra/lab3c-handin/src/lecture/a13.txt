@@ -1,1 +1,0 @@
-Slower transactions. In section 4, it says "The coordinator leaer ensures that clients cannot see any data committed by T_i until TT.after(s_i) is true. In this case, if the error bound is large, then clients have to wait a longer time. 
