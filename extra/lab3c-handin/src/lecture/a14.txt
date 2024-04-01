@@ -1,0 +1,1 @@
+Earlier in the paper, the authors showed that if we are in epoch t, then we observe commits in epoch 0...t-1. The same argument can be applied here; if the epoch is advanced by one, then this transaction is guaranteed to observe the results of all transactions that completed before it started. 

@@ -105,7 +105,7 @@ type Raft struct {
 
 	// snapshot 
 	// snapshotIdx int 
-	snapshot []byte
+	// snapshot []byte
 }
 
 func (rf *Raft) isOtherLogUpToDate(otherLastLogIdx int, otherLastLogTerm int) bool {
@@ -129,7 +129,7 @@ func (rf *Raft) applyMessage() {
 	rf.mu.Unlock() 
 
 	for i := lastApplied + 1; i <= commitIdx; i++ {
-		// DPrint("Applying message: i baseIdx rf.me message", i, baseIndex, me, log)
+		// fmt.Println("Applying message: i baseIdx rf.me message", i, baseIndex, me, lastApplied)
 		DPrint("Applying message: i baseIdx rf.me message cpylog", i, baseIndex, me, ApplyMsg{CommandValid: true, Command: cpy[i-baseIndex].Command, CommandIndex: i}, cpy)
 		
 		command := cpy[i-baseIndex].Command
@@ -151,12 +151,11 @@ func (rf *Raft) GetState() (int, bool) {
 
 func (rf *Raft) getRaftState() []byte {
 	w := new(bytes.Buffer)
-    e := labgob.NewEncoder(w)
-    e.Encode(rf.currentTerm)
-    e.Encode(rf.votedFor)
-    e.Encode(rf.log)
-    e.Encode(rf.snapshotIdx)
-    return w.Bytes()
+	e := labgob.NewEncoder(w)
+	e.Encode(rf.currentTerm)
+	e.Encode(rf.votedFor)
+	e.Encode(rf.log)
+	return w.Bytes()
 }
 
 // save Raft's persistent state to stable storage,
@@ -166,46 +165,12 @@ func (rf *Raft) getRaftState() []byte {
 // second argument to persister.Save().
 // after you've implemented snapshots, pass the current snapshot
 // (or nil if there's not yet a snapshot).
-func (rf *Raft) persist() {
-	w := new(bytes.Buffer)
-	e := labgob.NewEncoder(w)
-	e.Encode(rf.currentTerm)
-	e.Encode(rf.votedFor)
-	e.Encode(rf.log)
-	raftstate := w.Bytes()
-
-	if rf.snapshot != nil {
-		s := new(bytes.Buffer)
-		t := labgob.NewEncoder(s)
-		t.Encode(rf.log[0].Index)
-		t.Encode(rf.log[0].Term)
-		currSnapshot := append(s.Bytes(), rf.snapshot...)
-		rf.persister.Save(raftstate, currSnapshot)
-		fmt.Println("saving state + snapshot, rf.me ", rf.me)
-		return 
-	} 
-	rf.persister.Save(raftstate, nil)
-}
-
-func (rf *Raft) readSnapshot(data []byte) {
-	fmt.Println("in readsnapshot, rf.me ", rf.me)
-	if data == nil || len(data) < 1 {
-		return 
+func (rf *Raft) persist(setSnapshot bool, snapshot []byte) {
+	if setSnapshot {
+		rf.persister.Save(rf.getRaftState(), snapshot)
+	} else {
+		rf.persister.Save(rf.getRaftState(), rf.persister.ReadSnapshot())
 	}
-	var lastIncludedIndex, lastIncludedTerm int
-	var storedSnap []byte
-	r := bytes.NewBuffer(data)
-	d := labgob.NewDecoder(r)
-	d.Decode(&lastIncludedIndex)
-	d.Decode(&lastIncludedTerm)
-	d.Decode(&storedSnap)
-
-	rf.lastApplied = lastIncludedIndex
-	rf.commitIdx = lastIncludedIndex
-	rf.shortenLog(lastIncludedIndex, lastIncludedTerm)
-
-	msg := ApplyMsg{SnapshotValid: true, Snapshot: storedSnap, SnapshotTerm: lastIncludedTerm, SnapshotIndex: lastIncludedIndex}
-	rf.applyCh <- msg
 }
 
 // restore previously persisted state.
@@ -229,6 +194,8 @@ func (rf *Raft) readPersist(data []byte) {
 		rf.currentTerm = currentTerm
 		rf.votedFor = votedFor 
 		rf.log = log
+		rf.commitIdx = log[0].Index
+		rf.lastApplied = log[0].Index
 		rf.mu.Unlock()
 	}
 }
@@ -246,7 +213,7 @@ type InstallSnapshotReply struct {
 }
 
 func (rf *Raft) InstallSnapshot(args *InstallSnapshotArgs, reply *InstallSnapshotReply) {
-	fmt.Println("in installSnapshot, server rf.commitIdx args.LastIncludedIdx", rf.me, rf.commitIdx, args.LastIncludedIndex)
+	// fmt.Println("in installSnapshot, server rf.commitIdx args.LastIncludedIdx", rf.me, rf.commitIdx, args.LastIncludedIndex)
 	rf.mu.Lock() 
 	defer rf.mu.Unlock() 
 
@@ -255,11 +222,11 @@ func (rf *Raft) InstallSnapshot(args *InstallSnapshotArgs, reply *InstallSnapsho
 		return 
 	}
 
-	defer rf.persist()
 	if args.Term > rf.currentTerm {
 		rf.currentTerm = args.Term
 		rf.votedFor = -1
 		rf.currentState = Follower
+		rf.persist(false, nil)
 	}
 
 	rf.heartbeat <- true
@@ -269,17 +236,16 @@ func (rf *Raft) InstallSnapshot(args *InstallSnapshotArgs, reply *InstallSnapsho
 		rf.shortenLog(args.LastIncludedIndex, args.LastIncludedTerm)
 		rf.lastApplied = args.LastIncludedIndex
 		rf.commitIdx = args.LastIncludedIndex
-		rf.snapshot = args.Data
-		fmt.Println("getting caught up! ", rf.log)
+		rf.persist(true, args.Data)
+		// fmt.Println("getting caught up! ", rf.log)
 
 		msg := ApplyMsg{SnapshotValid: true, SnapshotTerm: args.LastIncludedTerm, SnapshotIndex: args.LastIncludedIndex, Snapshot: args.Data}
-		// fmt.Println("sending data! ", args.Data)
 		rf.applyCh <- msg
 	}
 }
 
 func (rf *Raft) SendInstallSnapshot(server int, args *InstallSnapshotArgs, reply *InstallSnapshotReply) {
-	fmt.Println("in sendinstallsnapshot, server otherserver", rf.me, server)
+	// fmt.Println("in sendinstallsnapshot, server otherserver", rf.me, server)
 	ok := rf.peers[server].Call("Raft.InstallSnapshot", args, reply)
 
 	rf.mu.Lock()
@@ -293,7 +259,7 @@ func (rf *Raft) SendInstallSnapshot(server int, args *InstallSnapshotArgs, reply
 		rf.currentTerm = reply.Term
 		rf.votedFor = -1
 		rf.currentState = Follower
-		rf.persist()
+		rf.persist(false, nil)
 		return
 	}
 
@@ -330,15 +296,13 @@ func (rf *Raft) Snapshot(index int, snapshot []byte) {
 	// Your code here (2D).
 	rf.mu.Lock() 
 	defer rf.mu.Unlock() 
-	defer rf.persist() 
+	defer rf.persist(true, snapshot) 
 
 	startIdx := rf.log[0].Index
 	if startIdx >= index || index > rf.getLastIndex() {
 		return // skip this request 
 	}
 	rf.shortenLog(index, rf.log[index-startIdx].Term)
-	rf.snapshot = snapshot 
-	fmt.Println("In snapshot, index is ", index, " and I am server ", rf.me, " with shortened log ", rf.log)
 }
 
 
@@ -390,7 +354,7 @@ func (rf *Raft) ProcessAppendEntry(args *AppendEntriesRPCArgs, reply *AppendEntr
 		reply.Term = rf.currentTerm 
 		return 
 	} 
-	defer rf.persist()
+	defer rf.persist(false, nil)
 	rf.currentState = Follower 
 	rf.heartbeat <- true 
 	DPrint(rf.me, " received heartbeat from (in appendentries)" , args.LeaderId)
@@ -441,7 +405,7 @@ func (rf *Raft) SendAppendEntry(server int, args *AppendEntriesRPCArgs, reply *A
 		rf.currentTerm = reply.Term 
 		rf.currentState = Follower 
 		rf.votedFor = -1
-		rf.persist() 
+		rf.persist(false, nil) 
 		return 
 	}
 
@@ -513,7 +477,7 @@ func (rf *Raft) InitiateAppendEntry() {
 
 					go rf.SendAppendEntry(i, args, &AppendEntriesRPCReply{})
 				} else {
-					args := InstallSnapshotArgs{Term: rf.currentTerm, LeaderId: rf.me, LastIncludedIndex: rf.log[0].Index,LastIncludedTerm: rf.log[0].Term, Data:rf.snapshot}
+					args := InstallSnapshotArgs{Term: rf.currentTerm, LeaderId: rf.me, LastIncludedIndex: rf.log[0].Index,LastIncludedTerm: rf.log[0].Term, Data:rf.persister.ReadSnapshot()}
 					go rf.SendInstallSnapshot(i, &args, &InstallSnapshotReply{})
 				}
 			}
@@ -533,7 +497,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 		reply.Term = rf.currentTerm  
 		return 
 	} 
-	defer rf.persist() 
+	defer rf.persist(false, nil) 
 	
 	if args.Term > rf.currentTerm {
 		rf.currentTerm = args.Term 
@@ -587,7 +551,7 @@ func (rf *Raft) SendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 			rf.votedFor = -1
 			rf.currentTerm = reply.Term 
 			rf.currentState = Follower 
-			rf.persist()
+			rf.persist(false, nil)
 		} else if reply.VoteGiven && rf.currentState == Candidate && rf.currentTerm == args.Term {
 			rf.voteCount++
 			if rf.voteCount > len(rf.peers) / 2 {
@@ -629,10 +593,9 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 		return index, term, isLeader
 	}
 	lastIdx := rf.getLastIndex()
-	// rf.matchIdx[rf.me] = lastIdx
 	rf.log = append(rf.log, LogInfo{Index: lastIdx + 1, Term: term, Command: command})
 	DPrint("In start, and am leader, so adding to my log: server ", rf.me, " and matchidx and nextidx is ", rf.matchIdx, rf.nextIdx)
-	rf.persist()
+	rf.persist(false, nil)
 	return lastIdx + 1, term, isLeader
 }
 
@@ -683,7 +646,7 @@ func (rf *Raft) ticker() {
 				rf.votedFor = rf.me 
 				rf.voteCount = 1 
 				rf.mu.Unlock() 
-				rf.persist()
+				rf.persist(false, nil)
 				DPrint(rf.me, " became candidate")
 				rf.BeginElection() 
 
@@ -740,17 +703,16 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.gaveVote = make(chan bool, 50)
 	rf.applyCh = applyCh
 
-	rf.snapshot = nil
+	// rf.snapshot = nil
 
 	// Your initialization code here (2A, 2B, 2C).
 
 	// initialize from state persisted before a crash
 	rf.readPersist(persister.ReadRaftState())
-	rf.readSnapshot(persister.ReadSnapshot())
-	rf.persist()
+	rf.persist(false, nil)
 
 	// start ticker goroutine to start elections
-	fmt.Println("starting rf.ticker() and server ", rf.me)
+	// fmt.Println("starting rf.ticker() and server ", rf.me)
 	go rf.ticker()
 
 	return rf

@@ -189,8 +189,8 @@ func (cfg *config) ingestSnap(i int, snapshot []byte, index int) string {
 	d := labgob.NewDecoder(r)
 	var lastIncludedIndex int
 	var xlog []interface{}
-	fmt.Println(d.Decode(&xlog))
-	fmt.Println("received some message from ", i, " with index ", index)
+	// fmt.Println(d.Decode(&xlog))
+	// fmt.Println("received some message from ", i, " with index ", index)
 	if d.Decode(&lastIncludedIndex) != nil ||
 		d.Decode(&xlog) != nil {
 		log.Fatalf("snapshot decode error")
@@ -222,7 +222,7 @@ func (cfg *config) applierSnap(i int, applyCh chan ApplyMsg) {
 	for m := range applyCh {
 		err_msg := ""
 		if m.SnapshotValid {
-			fmt.Println("printing msg ", m)
+			// fmt.Println("printing msg ", m)
 			cfg.mu.Lock()
 			err_msg = cfg.ingestSnap(i, m.Snapshot, m.SnapshotIndex)
 			cfg.mu.Unlock()

@@ -1136,7 +1136,7 @@ func snapcommon(t *testing.T, name string, disconnect bool, reliable bool, crash
 			sender = (leader1 + 1) % servers
 			victim = leader1
 		}
-		fmt.Println("STARTING ITER ", i, " with victim ", victim)
+		// fmt.Println("STARTING ITER ", i, " with victim ", victim)
 
 		if disconnect {
 			cfg.disconnect(victim)
@@ -1176,7 +1176,7 @@ func snapcommon(t *testing.T, name string, disconnect bool, reliable bool, crash
 			leader1 = cfg.checkOneLeader()
 		}
 		if crash {
-			fmt.Println("Restarting victim! ", victim)
+			// fmt.Println("Restarting victim! ", victim)
 			cfg.start1(victim, cfg.applierSnap)
 			cfg.connect(victim)
 			cfg.one(rand.Int(), servers, true)
