@@ -1,13 +1,19 @@
 package kvraft
 
-import "6.5840/labrpc"
-import "crypto/rand"
-import "math/big"
+import (
+	"crypto/rand"
+	"math/big"
+	"sync"
 
+	"6.5840/labrpc"
+)
 
 type Clerk struct {
 	servers []*labrpc.ClientEnd
-	// You will have to modify this struct.
+	clerkId int64
+	commandId int64 
+	mu sync.Mutex
+	raftLeader int 
 }
 
 func nrand() int64 {
@@ -20,7 +26,9 @@ func nrand() int64 {
 func MakeClerk(servers []*labrpc.ClientEnd) *Clerk {
 	ck := new(Clerk)
 	ck.servers = servers
-	// You'll have to add code here.
+	ck.clerkId = nrand() 
+	ck.raftLeader = 0
+	ck.commandId = 0
 	return ck
 }
 
@@ -35,9 +43,32 @@ func MakeClerk(servers []*labrpc.ClientEnd) *Clerk {
 // must match the declared types of the RPC handler function's
 // arguments. and reply must be passed as a pointer.
 func (ck *Clerk) Get(key string) string {
+	ck.mu.Lock() 
+	myCommandId := ck.commandId
+	ck.commandId++
+	pollServer := ck.raftLeader
+	ck.mu.Unlock() 
 
-	// You will have to modify this function.
-	return ""
+	args := GetArgs{Key: key, CommandId: myCommandId, ClerkId: ck.clerkId}
+	output := ""
+	for {
+		reply := GetReply{} 
+		ok := ck.servers[pollServer].Call("KVServer.Get", &args, &reply)
+		DPrint("In client with get and sent request ", args, " received okay with pollserver", pollServer, " and reply ", reply)
+		if ok && (reply.Status == OK || reply.Status == ErrNoKey) {
+			if reply.Status == OK {
+				output = reply.Value
+			}
+			break
+		}
+		pollServer = (pollServer + 1) % len(ck.servers)
+	}
+	
+	ck.mu.Lock() 
+	ck.raftLeader = pollServer
+	ck.mu.Unlock()
+	
+	return output
 }
 
 // shared by Put and Append.
@@ -49,12 +80,32 @@ func (ck *Clerk) Get(key string) string {
 // must match the declared types of the RPC handler function's
 // arguments. and reply must be passed as a pointer.
 func (ck *Clerk) PutAppend(key string, value string, op string) {
-	// You will have to modify this function.
+	ck.mu.Lock() 
+	myCommandId := ck.commandId
+	ck.commandId++
+	pollServer := ck.raftLeader
+	ck.mu.Unlock() 
+
+	args := PutAppendArgs{Key: key, Value: value, CommandId: myCommandId, ClerkId: ck.clerkId, Type: op}
+
+	for {
+		reply := PutAppendReply{}
+		ok := ck.servers[pollServer].Call("KVServer.PutAppend", &args, &reply)
+		DPrint("In client with ", op, " and sent request ", args, " received okay with pollserver", pollServer, " and reply ", reply)
+		if ok && reply.Status == OK {
+			break 
+		}
+		pollServer = (pollServer + 1) % len(ck.servers)
+	}
+	
+	ck.mu.Lock() 
+	ck.raftLeader = pollServer
+	ck.mu.Unlock()
 }
 
 func (ck *Clerk) Put(key string, value string) {
-	ck.PutAppend(key, value, "Put")
+	ck.PutAppend(key, value, PUT)
 }
 func (ck *Clerk) Append(key string, value string) {
-	ck.PutAppend(key, value, "Append")
+	ck.PutAppend(key, value, APPEND)
 }

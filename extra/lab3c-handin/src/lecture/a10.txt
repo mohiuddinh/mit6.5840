@@ -1,1 +1,0 @@
-Is raft actually used in production systems? Or is something more complex used? Also, are there services currently that abstract away the underlying mechanisms of distributed consensus (i.e. how we will use our raft instances to create the kv server)

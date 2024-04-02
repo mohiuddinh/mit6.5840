@@ -1,1 +1,0 @@
-When a controller removes stale replicas, does that mean it just removes that specific outdated chunk? Also, will that chunk be updated to the real value now? Or can that replica no longer serve that chunk? 

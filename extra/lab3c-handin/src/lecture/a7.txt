@@ -1,5 +1,0 @@
-server a: servers a, b, e, f will vote. This is greater than majority, so it can be elected. c and d will not vote because their logs are more up-to-date 
-
-server d: all servers will vote for it, it can be elected 
-
-server f: no servers will vote for it, it cannot be elected. All other logs are more up to date than server f's log 

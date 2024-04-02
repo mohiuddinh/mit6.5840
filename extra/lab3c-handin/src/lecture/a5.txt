@@ -1,1 +1,0 @@
-I like the go routines. It makes writing concurrent code much simpler than compared to other languages. One thing that is a bit annoying is that struct fields need to be capitalized so they can get accessed -- I find this a bit unintuitive and would prefer public/private keywords. 

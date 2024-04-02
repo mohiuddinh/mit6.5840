@@ -1,1 +1,0 @@
-Why should we not implement the offset in Snapshot? Just easier to program? Also, what exactly is the point of the offset? I am assuming it is to send only a small amount of data to the follower at a time, but if snapshots are being called relatively frequently, then the amount of data transferred should be small regardless.  

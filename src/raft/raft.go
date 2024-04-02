@@ -102,6 +102,8 @@ type Raft struct {
 
 	nextIdx []int 
 	matchIdx []int 
+
+	// sendLogs chan bool 
 }
 
 func (rf *Raft) isOtherLogUpToDate(otherLastLogIdx int, otherLastLogTerm int) bool {
@@ -586,7 +588,7 @@ func (rf *Raft) SendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 // the leader.
 func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	rf.mu.Lock() 
-	defer rf.mu.Unlock() 
+	defer rf.mu.Unlock()
 	index := -1
 	term := rf.currentTerm
 	isLeader := rf.currentState == Leader
@@ -599,6 +601,7 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	rf.log = append(rf.log, LogInfo{Index: lastIdx + 1, Term: term, Command: command})
 	DPrint("In start, and am leader, so adding to my log: server ", rf.me, " and matchidx and nextidx is ", rf.matchIdx, rf.nextIdx)
 	rf.persist(false, nil)
+	// rf.sendLogs <- true
 	return lastIdx + 1, term, isLeader
 }
 
@@ -642,7 +645,13 @@ func (rf *Raft) ticker() {
 			case Leader: 
 				DPrint(rf.me, " is leader and sending heartbeat")
 				rf.InitiateAppendEntry() 
-				time.Sleep(100*time.Millisecond)
+				time.Sleep(30*time.Millisecond)
+				// select {
+				// case <-time.After(30*time.Millisecond): 
+				// 	rf.InitiateAppendEntry()
+				// case <-rf.sendLogs: 
+				// 	rf.InitiateAppendEntry()
+				// }
 			case Candidate: 
 				rf.mu.Lock() 
 				rf.currentTerm++ 
@@ -706,7 +715,7 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.gaveVote = make(chan bool, 50)
 	rf.applyCh = applyCh
 
-	// Your initialization code here (2A, 2B, 2C).
+	// rf.sendLogs = make(chan bool, 100) // TODO
 
 	// initialize from state persisted before a crash
 	rf.readPersist(persister.ReadRaftState())

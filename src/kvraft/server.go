@@ -1,28 +1,34 @@
 package kvraft
 
 import (
-	"6.5840/labgob"
-	"6.5840/labrpc"
-	"6.5840/raft"
 	"log"
 	"sync"
 	"sync/atomic"
+	"time"
+
+	"6.5840/labgob"
+	"6.5840/labrpc"
+	"6.5840/raft"
 )
 
-const Debug = false
-
-func DPrintf(format string, a ...interface{}) (n int, err error) {
-	if Debug {
-		log.Printf(format, a...)
+const debug = false
+func DPrint(a ...interface{})  {
+	if debug {
+		log.Println(a...)
 	}
-	return
 }
 
 
-type Op struct {
+type Command struct {
 	// Your definitions here.
 	// Field names must start with capital letters,
 	// otherwise RPC will break.
+	Type string 
+	Key string
+	Value string 
+	ClerkId int64 
+	CommandId int64
+	RaftStatus string
 }
 
 type KVServer struct {
@@ -35,15 +41,55 @@ type KVServer struct {
 	maxraftstate int // snapshot if log grows this big
 
 	// Your definitions here.
+	outgoingCommands map[int]chan Command
+	data map[string]string
+	clientTable map[int64]int64
 }
 
+func (kv *KVServer) isApplied(command Command) (bool, Command) {
+	index, _, isLeader := kv.rf.Start(command)
+	DPrint("In isApplied with command ", command, " and index and isLeader ", index, isLeader)
+	if !isLeader {	// can't apply since not leader
+		return false, Command{RaftStatus: ErrWrongLeader, Value: ""}
+	}
+
+	kv.mu.Lock()
+	_, ok := kv.outgoingCommands[index]
+	if !ok {
+		kv.outgoingCommands[index] = make(chan Command, 1)
+	}
+	kv.mu.Unlock()
+
+	select {
+	case res := <-kv.outgoingCommands[index]: 
+		DPrint("In isApplied and channel returned some old and new command ", command, res)
+		isSame := command.ClerkId == res.ClerkId && command.CommandId == res.CommandId
+		if !isSame {
+			return false, Command{RaftStatus: ErrNotApplied, Value: ""}
+		}
+		res.RaftStatus = OK
+		return true, res
+	case <-time.After(200*time.Millisecond): // time out and return false
+		DPrint("in isApplied with command ", command, " and timed out")
+		return false, Command{RaftStatus: ErrTimeout, Value: ""}
+	}
+}
 
 func (kv *KVServer) Get(args *GetArgs, reply *GetReply) {
-	// Your code here.
+	command := Command{Type: GET, Key: args.Key, ClerkId: args.ClerkId, CommandId: args.CommandId}
+	DPrint("In KVServ with Get and command ", command, " calling isApplied now")
+	ok, resCommand := kv.isApplied(command)
+	DPrint("In KVServ with Get and isApplied returned with ", ok, resCommand)
+	reply.Status = resCommand.RaftStatus
+	reply.Value = resCommand.Value
 }
 
 func (kv *KVServer) PutAppend(args *PutAppendArgs, reply *PutAppendReply) {
-	// Your code here.
+	command := Command{Type: args.Type, Key: args.Key, ClerkId: args.ClerkId, CommandId: args.CommandId, Value: args.Value}
+	DPrint("In KVServ with PutApend and command ", command, " calling isApplied now")
+	_, resCommand := kv.isApplied(command)
+	DPrint("In KVServ with PutAppend and isApplied returned with ", resCommand)
+	reply.Status = resCommand.RaftStatus
 }
 
 // the tester calls Kill() when a KVServer instance won't
@@ -65,6 +111,62 @@ func (kv *KVServer) killed() bool {
 	return z == 1
 }
 
+// must hold hold
+func (kv *KVServer) applyLocally(command *Command) string {
+	switch command.Type {
+	case PUT: 
+		kv.data[command.Key] = command.Value
+	case APPEND: 
+		if value, exists := kv.data[command.Key]; exists {
+			kv.data[command.Key] = value + command.Value 
+		} else {
+			kv.data[command.Key] = command.Value
+		}
+	case GET: 
+		if value, exists := kv.data[command.Key]; exists {
+			command.Value = value
+		} else {
+			command.RaftStatus = ErrNoKey
+		}
+	}
+	DPrint("In applyLocally and applied command ", command, " now data is ", kv.data)
+	return ""
+}
+
+func (kv *KVServer) backgroundTask() {
+	for {
+		applyMsg := <-kv.applyCh
+		kv.mu.Lock() 
+		resultCommand := applyMsg.Command.(Command)
+		DPrint("Received message from channel ", resultCommand)
+		
+		if !applyMsg.SnapshotValid {
+			if resultCommand.Type == GET {
+				kv.applyLocally(&resultCommand)
+			} else {
+				val, ok := kv.clientTable[resultCommand.ClerkId]
+				if !ok || resultCommand.CommandId > val { // check if duplicate 
+					kv.applyLocally(&resultCommand)
+					kv.clientTable[resultCommand.ClerkId] = resultCommand.CommandId
+				}
+			}
+			
+			if _, exists := kv.outgoingCommands[applyMsg.CommandIndex]; !exists {
+				kv.outgoingCommands[applyMsg.CommandIndex] = make(chan Command, 1)
+				DPrint("Index exists and it's ", applyMsg.CommandIndex, " and we send value to channel")
+			} else { // clear out channel 
+				select {
+				case <-kv.outgoingCommands[applyMsg.CommandIndex]: 
+				default: 
+				}
+			}
+			kv.outgoingCommands[applyMsg.CommandIndex] <- resultCommand // fill in channel! 
+		} 
+		
+		kv.mu.Unlock()
+	}
+}
+
 // servers[] contains the ports of the set of
 // servers that will cooperate via Raft to
 // form the fault-tolerant key/value service.
@@ -80,7 +182,7 @@ func (kv *KVServer) killed() bool {
 func StartKVServer(servers []*labrpc.ClientEnd, me int, persister *raft.Persister, maxraftstate int) *KVServer {
 	// call labgob.Register on structures you want
 	// Go's RPC library to marshall/unmarshall.
-	labgob.Register(Op{})
+	labgob.Register(Command{})
 
 	kv := new(KVServer)
 	kv.me = me
@@ -90,8 +192,13 @@ func StartKVServer(servers []*labrpc.ClientEnd, me int, persister *raft.Persiste
 
 	kv.applyCh = make(chan raft.ApplyMsg)
 	kv.rf = raft.Make(servers, me, persister, kv.applyCh)
+	kv.data = make(map[string]string)
+	kv.outgoingCommands = make(map[int]chan Command)
+	kv.clientTable = make(map[int64]int64)
 
-	// You may need initialization code here.
+	// You may need initialization code here.	
+
+	go kv.backgroundTask()
 
 	return kv
 }
