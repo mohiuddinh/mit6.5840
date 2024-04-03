@@ -1,6 +1,7 @@
 package kvraft
 
 import (
+	"bytes"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -9,6 +10,7 @@ import (
 	"6.5840/labgob"
 	"6.5840/labrpc"
 	"6.5840/raft"
+	// "fmt"
 )
 
 const debug = false
@@ -137,10 +139,14 @@ func (kv *KVServer) backgroundTask() {
 	for {
 		applyMsg := <-kv.applyCh
 		kv.mu.Lock() 
-		resultCommand := applyMsg.Command.(Command)
-		DPrint("Received message from channel ", resultCommand)
 		
 		if !applyMsg.SnapshotValid {
+			// fmt.Println(applyMsg)
+			if applyMsg.Command == nil {
+				applyMsg.Command = Command{}
+			}
+			resultCommand := applyMsg.Command.(Command)
+			DPrint("Received message not it's not snapshot ", resultCommand)
 			if resultCommand.Type == GET {
 				kv.applyLocally(&resultCommand)
 			} else {
@@ -161,8 +167,24 @@ func (kv *KVServer) backgroundTask() {
 				}
 			}
 			kv.outgoingCommands[applyMsg.CommandIndex] <- resultCommand // fill in channel! 
-		} 
+		} else { // snapshot
+			DPrint("Received snapshot")
+			r := bytes.NewBuffer(applyMsg.Snapshot)
+			d := labgob.NewDecoder(r)
+			d.Decode(&kv.data)
+			d.Decode(&kv.clientTable)
+		}
 		
+		if kv.maxraftstate != -1 && kv.rf.Persister.RaftStateSize() >= kv.maxraftstate {
+			// if curr raft size > 90% of max allowed, we call snapshot 
+			DPrint("State is too big, now snapshotting")
+			w := new(bytes.Buffer)
+			e := labgob.NewEncoder(w)
+			e.Encode(kv.data)
+			e.Encode(kv.clientTable)
+			go kv.rf.Snapshot(applyMsg.CommandIndex, w.Bytes())
+		}
+
 		kv.mu.Unlock()
 	}
 }
@@ -195,6 +217,14 @@ func StartKVServer(servers []*labrpc.ClientEnd, me int, persister *raft.Persiste
 	kv.data = make(map[string]string)
 	kv.outgoingCommands = make(map[int]chan Command)
 	kv.clientTable = make(map[int64]int64)
+
+	snapshot := kv.rf.Persister.ReadSnapshot()
+	if len(snapshot) > 0 { 
+		r := bytes.NewBuffer(snapshot)
+		d := labgob.NewDecoder(r)
+		d.Decode(&kv.data)
+		d.Decode(&kv.clientTable)
+	}
 
 	// You may need initialization code here.	
 
