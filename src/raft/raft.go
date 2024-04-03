@@ -80,7 +80,7 @@ type LogInfo struct {
 type Raft struct {
 	mu        sync.Mutex          // Lock to protect shared access to this peer's state
 	peers     []*labrpc.ClientEnd // RPC end points of all peers
-	persister *Persister          // Object to hold this peer's persisted state
+	Persister *Persister          // Object to hold this peer's persisted state
 	me        int                 // this peer's index into peers[]
 	dead      int32               // set by Kill()
 
@@ -161,14 +161,14 @@ func (rf *Raft) getCurrRaftState() []byte {
 // where it can later be retrieved after a crash and restart.
 // see paper's Figure 2 for a description of what should be persistent.
 // before you've implemented snapshots, you should pass nil as the
-// second argument to persister.Save().
+// second argument to Persister.Save().
 // after you've implemented snapshots, pass the current snapshot
 // (or nil if there's not yet a snapshot).
 func (rf *Raft) persist(setSnapshot bool, snapshot []byte) {
 	if setSnapshot {
-		rf.persister.Save(rf.getCurrRaftState(), snapshot)
+		rf.Persister.Save(rf.getCurrRaftState(), snapshot)
 	} else {
-		rf.persister.Save(rf.getCurrRaftState(), rf.persister.ReadSnapshot())
+		rf.Persister.Save(rf.getCurrRaftState(), rf.Persister.ReadSnapshot())
 	}
 }
 
@@ -214,7 +214,8 @@ func (rf *Raft) InstallSnapshot(args *InstallSnapshotArgs, reply *InstallSnapsho
 	rf.mu.Lock() 
 	defer rf.mu.Unlock() 
 
-	if rf.currentTerm > args.Term {
+	startIdx := rf.log[0].Index
+	if rf.currentTerm > args.Term || args.LastIncludedIndex < startIdx {
 		reply.Term = rf.currentTerm
 		return 
 	}
@@ -229,19 +230,38 @@ func (rf *Raft) InstallSnapshot(args *InstallSnapshotArgs, reply *InstallSnapsho
 	rf.heartbeat <- true
 	reply.Term = rf.currentTerm
 
-	if args.LastIncludedIndex > rf.commitIdx {
-		rf.snapshotLog(args.LastIncludedIndex, args.LastIncludedTerm)
-		rf.lastApplied = args.LastIncludedIndex
-		rf.commitIdx = args.LastIncludedIndex
-		rf.persist(true, args.Data)
-		// fmt.Println("getting caught up! ", rf.log)
-
-		snapshotApply := ApplyMsg{SnapshotValid: true, SnapshotTerm: args.LastIncludedTerm, SnapshotIndex: args.LastIncludedIndex, Snapshot: args.Data}
-
-		go func(apply ApplyMsg) {
-        rf.applyCh <- apply
-    }(snapshotApply)
+	rf.snapshotLog(args.LastIncludedIndex, args.LastIncludedTerm)
+	startIdx = rf.log[0].Index
+	if rf.commitIdx < startIdx {
+			rf.commitIdx = startIdx
 	}
+	if rf.lastApplied < startIdx {
+			rf.lastApplied = startIdx
+	}
+	rf.persist(true, args.Data)
+	if rf.lastApplied > startIdx {
+		return 
+	}
+	
+	snapshotApply := ApplyMsg{SnapshotValid: true, SnapshotTerm: args.LastIncludedTerm, SnapshotIndex: args.LastIncludedIndex, Snapshot: args.Data}
+	
+	go func(apply ApplyMsg) {
+    rf.applyCh <- apply
+  }(snapshotApply)
+
+	// if args.LastIncludedIndex > rf.commitIdx {
+	// 	rf.snapshotLog(args.LastIncludedIndex, args.LastIncludedTerm)
+	// 	rf.lastApplied = args.LastIncludedIndex
+	// 	rf.commitIdx = args.LastIncludedIndex
+	// 	rf.persist(true, args.Data)
+	// 	// fmt.Println("getting caught up! ", rf.log)
+
+	// 	snapshotApply := ApplyMsg{SnapshotValid: true, SnapshotTerm: args.LastIncludedTerm, SnapshotIndex: args.LastIncludedIndex, Snapshot: args.Data}
+
+	// 	go func(apply ApplyMsg) {
+  //       rf.applyCh <- apply
+  //   }(snapshotApply)
+	// }
 }
 
 func (rf *Raft) SendInstallSnapshot(server int, args *InstallSnapshotArgs, reply *InstallSnapshotReply) {
@@ -262,9 +282,10 @@ func (rf *Raft) SendInstallSnapshot(server int, args *InstallSnapshotArgs, reply
 		rf.persist(false, nil)
 		return
 	}
-
-	rf.nextIdx[server] = args.LastIncludedIndex + 1
-	rf.matchIdx[server] = args.LastIncludedIndex
+	if rf.matchIdx[server] < args.LastIncludedIndex {
+		rf.matchIdx[server] = args.LastIncludedIndex
+	}
+	rf.nextIdx[server] = rf.matchIdx[server] + 1
 }
 
 func (rf *Raft) getLastTerm() int {
@@ -372,28 +393,89 @@ func (rf *Raft) ProcessAppendEntry(args *AppendEntriesRPCArgs, reply *AppendEntr
 	}
 
 	startIdx := rf.log[0].Index
-	if args.PrevLogIdx >= startIdx && args.PrevLogTerm != rf.log[args.PrevLogIdx - startIdx].Term {
-		DPrint("Conflict and need to find the index and term to send back, rf.me ", rf.me)
-		thisTerm := rf.log[args.PrevLogIdx].Term
-		for i := args.PrevLogIdx - 1; i >= startIdx; i-- {
-			if rf.log[i - startIdx].Term != thisTerm {
-				reply.ConflictIdx = i + 1
-				break
-			}
-		}
-		reply.ConflictTerm = thisTerm
-	} else if args.PrevLogIdx > startIdx - 2 { // prevlogidx must be atleast startidx - 1 or more
-		// DPrint("Success in processappendentry, rf.me ", rf.me)
-		rf.log = rf.log[:args.PrevLogIdx - startIdx + 1]
-		rf.log = append(rf.log, args.Entries...)
-
+	if args.PrevLogIdx <= startIdx {
 		reply.Success = true
-		if rf.commitIdx < args.LeaderCommit {
-			// DPrint("Committing, rf.me commitIdx", rf.me, rf.commitIdx)
-			rf.commitIdx = int(math.Min(float64(args.LeaderCommit), float64(rf.getLastIndex())))
-			go rf.applyMessage()
+
+		// sync log if needed
+		if args.PrevLogIdx+len(args.Entries) > startIdx {
+				// if snapshottedIndex == prevLogIndex, all log entries should be added.
+				baseIdx := startIdx - args.PrevLogIdx
+				// only keep the last snapshotted one
+				rf.log = rf.log[:1]
+				rf.log = append(rf.log, args.Entries[baseIdx:]...)
 		}
+		return
+  }
+
+	if rf.log[args.PrevLogIdx - startIdx].Term != args.PrevLogTerm {
+		reply.Success = false
+		reply.Term = rf.currentTerm
+		// receiver's log in certain term unmatches Leader's log
+		reply.ConflictTerm = rf.log[args.PrevLogIdx - startIdx].Term
+
+		// expecting Leader to check the former term
+		// so set ConflictIndex to the first one of entries in ConflictTerm
+		conflictIndex := args.PrevLogIdx
+		// apparently, since rf.log[0] are ensured to match among all servers
+		// ConflictIndex must be > 0, safe to minus 1
+		for rf.log[conflictIndex - 1 - startIdx].Term == reply.ConflictTerm {
+				conflictIndex--
+				if conflictIndex == startIdx+1 {
+						// this may happen after snapshot,
+						// because the term of the first log may be the current term
+						// before lab 3b this is not going to happen, since rf.log[0].Term = 0
+						break
+				}
+		}
+		reply.ConflictIdx = conflictIndex
+		return
+  }
+
+unmatch_idx := -1
+	for idx := range args.Entries {
+			if len(rf.log) < args.PrevLogIdx + 2 + idx - startIdx ||
+					rf.log[args.PrevLogIdx+1+idx - startIdx].Term != args.Entries[idx].Term {
+					// unmatch log found
+					unmatch_idx = idx
+					break
+			}
 	}
+
+	if unmatch_idx != -1 {
+			// there are unmatch entries
+			// truncate unmatch Follower entries, and apply Leader entries
+			rf.log = rf.log[:args.PrevLogIdx+1+unmatch_idx-startIdx]
+			rf.log = append(rf.log, args.Entries[unmatch_idx:]...)
+	}
+
+	if args.LeaderCommit > rf.commitIdx {
+		rf.commitIdx = args.LeaderCommit
+		go rf.applyMessage()
+	}
+	reply.Success = true
+
+	// if args.PrevLogIdx >= startIdx && args.PrevLogTerm != rf.log[args.PrevLogIdx - startIdx].Term {
+	// 	DPrint("Conflict and need to find the index and term to send back, rf.me ", rf.me)
+	// 	thisTerm := rf.log[args.PrevLogIdx].Term
+	// 	for i := args.PrevLogIdx - 1; i >= startIdx; i-- {
+	// 		if rf.log[i - startIdx].Term != thisTerm {
+	// 			reply.ConflictIdx = i + 1
+	// 			break
+	// 		}
+	// 	}
+	// 	reply.ConflictTerm = thisTerm
+	// } else if args.PrevLogIdx > startIdx - 2 { // prevlogidx must be atleast startidx - 1 or more
+	// 	// DPrint("Success in processappendentry, rf.me ", rf.me)
+	// 	rf.log = rf.log[:args.PrevLogIdx - startIdx + 1]
+	// 	rf.log = append(rf.log, args.Entries...)
+
+	// 	reply.Success = true
+	// 	if rf.commitIdx < args.LeaderCommit {
+	// 		// DPrint("Committing, rf.me commitIdx", rf.me, rf.commitIdx)
+	// 		rf.commitIdx = int(math.Min(float64(args.LeaderCommit), float64(rf.getLastIndex())))
+	// 		go rf.applyMessage()
+	// 	}
+	// }
 }
 
 func (rf *Raft) SendAppendEntry(server int, args *AppendEntriesRPCArgs, reply *AppendEntriesRPCReply) {
@@ -473,7 +555,7 @@ func (rf *Raft) InitiateAppendEntry() {
 		for i := 0; i < len(rf.peers); i++ {
 			if i != rf.me {
 				if rf.nextIdx[i] <= startIdx { // need to send snapshot to follower because lagging too far behind 
-					args := InstallSnapshotArgs{Term: rf.currentTerm, LeaderId: rf.me, LastIncludedIndex: rf.log[0].Index,LastIncludedTerm: rf.log[0].Term, Data: rf.persister.ReadSnapshot()}
+					args := InstallSnapshotArgs{Term: rf.currentTerm, LeaderId: rf.me, LastIncludedIndex: rf.log[0].Index,LastIncludedTerm: rf.log[0].Term, Data: rf.Persister.ReadSnapshot()}
 					go rf.SendInstallSnapshot(i, &args, &InstallSnapshotReply{})
 				} else {
 					args := &AppendEntriesRPCArgs{LeaderId: rf.me, Term: rf.currentTerm, PrevLogIdx: rf.nextIdx[i] - 1, LeaderCommit: rf.commitIdx}
@@ -702,17 +784,17 @@ func (rf *Raft) ticker() {
 // the service or tester wants to create a Raft server. the ports
 // of all the Raft servers (including this one) are in peers[]. this
 // server's port is peers[me]. all the servers' peers[] arrays
-// have the same order. persister is a place for this server to
+// have the same order. Persister is a place for this server to
 // save its persistent state, and also initially holds the most
 // recent saved state, if any. applyCh is a channel on which the
 // tester or service expects Raft to send ApplyMsg messages.
 // Make() must return quickly, so it should start goroutines
 // for any long-running work.
 func Make(peers []*labrpc.ClientEnd, me int,
-	persister *Persister, applyCh chan ApplyMsg) *Raft {
+	Persister *Persister, applyCh chan ApplyMsg) *Raft {
 	rf := &Raft{}
 	rf.peers = peers
-	rf.persister = persister
+	rf.Persister = Persister
 	rf.me = me
 	rf.log = append(rf.log, LogInfo{Index: 0, Term: 0})
 
@@ -728,7 +810,7 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.sendLogs = make(chan bool, 1) // TODO
 
 	// initialize from state persisted before a crash
-	rf.readPersist(persister.ReadRaftState())
+	rf.readPersist(Persister.ReadRaftState())
 	rf.persist(false, nil)
 
 	// start ticker goroutine to start elections
