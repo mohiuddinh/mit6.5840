@@ -103,7 +103,8 @@ type Raft struct {
 	nextIdx []int 
 	matchIdx []int 
 
-	// sendLogs chan bool 
+	sendLogs chan bool 
+	heartbeatTimer *time.Timer
 }
 
 func (rf *Raft) isOtherLogUpToDate(otherLastLogIdx int, otherLastLogTerm int) bool {
@@ -128,7 +129,7 @@ func (rf *Raft) applyMessage() {
 
 	for i := lastApplied + 1; i <= commitIdx; i++ {
 		// fmt.Println("Applying message: i baseIdx rf.me message", i, startIdx, me, lastApplied)
-		DPrint("Applying message: i baseIdx rf.me message cpylog", i, startIdx, me, ApplyMsg{CommandValid: true, Command: cpy[i-startIdx].Command, CommandIndex: i}, cpy)
+		DPrint("Applying message: i baseIdx rf.me message cpylog", i, startIdx, me, ApplyMsg{CommandValid: true, Command: cpy[i - startIdx].Command, CommandIndex: i}, cpy)
 		
 		command := cpy[i - startIdx].Command
 		rf.applyCh <- ApplyMsg{CommandValid: true, Command: command, CommandIndex: i}
@@ -561,6 +562,7 @@ func (rf *Raft) SendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 			rf.voteCount++
 			if rf.voteCount > len(rf.peers) / 2 {
 				rf.currentState = Leader
+				rf.heartbeatTimer = time.NewTimer(60*time.Millisecond)
 				rf.wonElection <- true 
 				rf.nextIdx = make([]int, len(rf.peers))
 				rf.matchIdx = make([]int, len(rf.peers))
@@ -601,7 +603,12 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	rf.log = append(rf.log, LogInfo{Index: lastIdx + 1, Term: term, Command: command})
 	DPrint("In start, and am leader, so adding to my log: server ", rf.me, " and matchidx and nextidx is ", rf.matchIdx, rf.nextIdx)
 	rf.persist(false, nil)
-	// rf.sendLogs <- true
+
+	select { // empty in case there is something so we don't block 
+	case <-rf.sendLogs: // we want to immediately send this to be circulated to the other follows for efficient processing
+	default: 
+	}
+	rf.sendLogs <- true
 	return lastIdx + 1, term, isLeader
 }
 
@@ -644,14 +651,17 @@ func (rf *Raft) ticker() {
 		switch rf.currentState {
 			case Leader: 
 				DPrint(rf.me, " is leader and sending heartbeat")
-				rf.InitiateAppendEntry() 
-				time.Sleep(30*time.Millisecond)
-				// select {
-				// case <-time.After(30*time.Millisecond): 
-				// 	rf.InitiateAppendEntry()
-				// case <-rf.sendLogs: 
-				// 	rf.InitiateAppendEntry()
-				// }
+				// rf.InitiateAppendEntry() 
+				// time.Sleep(30*time.Millisecond)
+				select {
+				case <-rf.heartbeatTimer.C: 
+					rf.InitiateAppendEntry()
+					rf.heartbeatTimer.Reset(80*time.Millisecond)
+				case <-rf.sendLogs: // send logs immediately but wait a bit so things catch up -- otherwise bugs? 
+					time.Sleep(30*time.Millisecond)
+					rf.InitiateAppendEntry()
+					rf.heartbeatTimer.Reset(80*time.Millisecond)
+				}
 			case Candidate: 
 				rf.mu.Lock() 
 				rf.currentTerm++ 
@@ -715,7 +725,7 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.gaveVote = make(chan bool, 50)
 	rf.applyCh = applyCh
 
-	// rf.sendLogs = make(chan bool, 100) // TODO
+	rf.sendLogs = make(chan bool, 1) // TODO
 
 	// initialize from state persisted before a crash
 	rf.readPersist(persister.ReadRaftState())
