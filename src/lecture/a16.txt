@@ -1,0 +1,1 @@
+Bursting, adaptive capacity, and global admission control. They also built out a mechanism that scales out partitions based on the throughput consumed. Their goal is high availability and they tried a lot of different techniques to achieve this. 

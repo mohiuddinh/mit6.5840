@@ -1,0 +1,1 @@
+When they released their whitepaper in 2007, was dynamodb actually up and running at that time or was it just an idea? Also, are these large companies (when releasing papers) not scared that others might try to copy their unique design and offer a similar product? 

@@ -113,7 +113,7 @@ func (kv *KVServer) killed() bool {
 	return z == 1
 }
 
-// must hold hold
+// must hold lock
 func (kv *KVServer) applyLocally(command *Command) string {
 	switch command.Type {
 	case PUT: 

@@ -30,12 +30,16 @@ type Config struct {
 
 const (
 	OK = "OK"
+	TIMEOUT = "TIMEOUT"
+	OUTDATED = "OUTDATED"
 )
 
 type Err string
 
 type JoinArgs struct {
 	Servers map[int][]string // new GID -> servers mappings
+	ClerkID int64 
+	CommandID int 
 }
 
 type JoinReply struct {
@@ -45,6 +49,8 @@ type JoinReply struct {
 
 type LeaveArgs struct {
 	GIDs []int
+	ClerkID int64 
+	CommandID int 
 }
 
 type LeaveReply struct {
@@ -55,6 +61,8 @@ type LeaveReply struct {
 type MoveArgs struct {
 	Shard int
 	GID   int
+	ClerkID int64 
+	CommandID int 
 }
 
 type MoveReply struct {
@@ -64,6 +72,8 @@ type MoveReply struct {
 
 type QueryArgs struct {
 	Num int // desired config number
+	ClerkID int64 
+	CommandID int 
 }
 
 type QueryReply struct {

@@ -1,0 +1,1 @@
+I think the second transaction will abort in the validation phase. According to the paper, "if any object changes, the validation fails and the transaction is aborted."
