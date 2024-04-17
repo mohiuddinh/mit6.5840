@@ -6,11 +6,13 @@ func (rf *Raft) backgroundStateManager() {
 		case <-rf.sendHeartbeatTicker.C:
 		rf.mu.Lock()
 		if rf.currentState == Leader {
+			DPrint("Timer ran out, kicking off initiateAppendEntries from leader ", rf.me)
 			go rf.initiateAppendEntries()
 		}
 		rf.mu.Unlock()
 		
 		case <-rf.startElectionTicker.C:
+			DPrint("Timer ran out, kicking off beginElection from server ", rf.me)
 			rf.mu.Lock()
 			rf.transitionToCandidate()
 			go rf.beginElection()
@@ -30,9 +32,8 @@ func (rf *Raft) backgroundApply() {
 		// 	rf.mu.Unlock() 
 		// 	return 
 		// }
-
 		startIdx := rf.getStartIdx()
-		commitIndex := rf.commitIdx
+		commitIdx := rf.commitIdx
 		copyLogs := deepcopySlice(rf.log[rf.lastApplied - startIdx + 1: rf.commitIdx - startIdx + 1])
 
 		rf.mu.Unlock()
@@ -42,7 +43,8 @@ func (rf *Raft) backgroundApply() {
 			rf.applyCh <- commandApply
 		}
 		rf.mu.Lock()
-		rf.lastApplied = max(commitIndex, rf.lastApplied)
+		rf.lastApplied = max(commitIdx, rf.lastApplied)
+		DPrint("In backgroundApply for server ", rf.me, " and updated lastApplied to ", rf.lastApplied)
 		rf.mu.Unlock()
 	}
 }

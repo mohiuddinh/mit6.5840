@@ -1,0 +1,1 @@
+The primary role of Gutter servers is to serve as a backup during server failures. If a server fails or is temporarily unreachable and a writing client deletes the corresponding key from the Gutter servers, any update or write operation to that key will be lost. 

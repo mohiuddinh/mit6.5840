@@ -189,6 +189,16 @@ func (kv *KVServer) backgroundTask() {
 	}
 }
 
+func (kv *KVServer) recoverFromSnapshot() {
+	snapshot := kv.rf.Persister.ReadSnapshot()
+	if len(snapshot) > 0 { 
+		r := bytes.NewBuffer(snapshot)
+		d := labgob.NewDecoder(r)
+		d.Decode(&kv.data)
+		d.Decode(&kv.clientTable)
+	}
+}
+
 // servers[] contains the ports of the set of
 // servers that will cooperate via Raft to
 // form the fault-tolerant key/value service.
@@ -218,15 +228,7 @@ func StartKVServer(servers []*labrpc.ClientEnd, me int, persister *raft.Persiste
 	kv.outgoingCommands = make(map[int]chan Command)
 	kv.clientTable = make(map[int64]int64)
 
-	snapshot := kv.rf.Persister.ReadSnapshot()
-	if len(snapshot) > 0 { 
-		r := bytes.NewBuffer(snapshot)
-		d := labgob.NewDecoder(r)
-		d.Decode(&kv.data)
-		d.Decode(&kv.clientTable)
-	}
-
-	// You may need initialization code here.	
+	kv.recoverFromSnapshot()	
 
 	go kv.backgroundTask()
 

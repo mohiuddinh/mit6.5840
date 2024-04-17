@@ -1,0 +1,8 @@
+def A(): 
+  y = C(B())
+
+def C(x): 
+  z = D(x)
+  return Get(z)
+
+D's parent would initiate the re-execution, so in this case it would be C. 

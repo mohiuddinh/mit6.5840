@@ -1,0 +1,1 @@
+Is memcached still used by facebook or did they come up with a new system to replace it? 

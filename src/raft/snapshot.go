@@ -36,7 +36,7 @@ func (rf *Raft) readPersist(data []byte) {
     log []LogInfo
   )
   if d.Decode(&currentTerm) != nil || d.Decode(&votedFor) != nil || d.Decode(&log) != nil {
-    fmt.Println("decode persist state fail")
+    fmt.Println("ERROR IN READPERSIST!")
     return
   }
 
@@ -57,6 +57,7 @@ func (rf *Raft) Snapshot(index int, snapshot []byte) {
 
   rf.log = deepcopySlice(rf.log[index - startIdx:])
   rf.log[0].Command = nil
+  DPrint("In snapshot, I am ", rf.me, " and snapshot index is ", index, " and my new log is ", rf.log)
 
   rf.persist(true, snapshot)
 }
@@ -66,6 +67,7 @@ func (rf *Raft) InstallSnapshot(args *InstallSnapshotArgs, reply *InstallSnapsho
 
   reply.Term = rf.currentTerm
   if args.Term < rf.currentTerm {
+    DPrint("In InstallSnapshot, I am ", rf.me, " but my currentTerm is higher, so returning early")
     rf.mu.Unlock()
     return
   }
@@ -74,6 +76,7 @@ func (rf *Raft) InstallSnapshot(args *InstallSnapshotArgs, reply *InstallSnapsho
 
   startIdx := rf.getStartIdx()
   if rf.commitIdx >= args.LastIncludedIdx {
+    DPrint("In InstallSnapshot, I am ", rf.me, " but my commitIdx is >= lastIncludedIdx, so returning early")
     rf.mu.Unlock()
     return
   }
@@ -90,6 +93,7 @@ func (rf *Raft) InstallSnapshot(args *InstallSnapshotArgs, reply *InstallSnapsho
   rf.lastApplied = args.LastIncludedIdx
   rf.commitIdx = args.LastIncludedIdx
 
+  DPrint("In InstallSnapshot, I am ", rf.me, " and I updated so my lastApplied is ", rf.lastApplied, " and commitIdx is ", rf.commitIdx)
   rf.mu.Unlock()
 
   snapshotApply := ApplyMsg{SnapshotValid: true, Snapshot: args.Snapshot, SnapshotTerm: args.LastIncludedTerm,SnapshotIndex: args.LastIncludedIdx}
@@ -97,8 +101,9 @@ func (rf *Raft) InstallSnapshot(args *InstallSnapshotArgs, reply *InstallSnapsho
   // go func(apply ApplyMsg) {
   //   rf.applyCh <- apply
   // }(snapshotApply)
-
+  DPrint("In InstallSnapshot, I am ", rf.me, " and now applying snapshot with index ", args.LastIncludedIdx)
   rf.applyCh <- snapshotApply
+  DPrint("In InstallSnapshot, I am ", rf.me, " and now done applying snapshot with index ", args.LastIncludedIdx)
 }
 
 func (rf *Raft) sendInstallSnapshot(server int, args *InstallSnapshotArgs, reply *InstallSnapshotReply) {
@@ -109,6 +114,7 @@ func (rf *Raft) sendInstallSnapshot(server int, args *InstallSnapshotArgs, reply
   }
 
   if rf.currentTerm < reply.Term {
+    DPrint("In sendInstallSnapshot, and I am ", rf.me, " returned term from follower ", server, " is larger so I am becoming follower")
     rf.transitionToFollower(args.Term, true)
     return 
   }
@@ -116,5 +122,6 @@ func (rf *Raft) sendInstallSnapshot(server int, args *InstallSnapshotArgs, reply
   if rf.currentTerm == reply.Term {
     rf.matchIdx[server] = max(rf.matchIdx[server], args.LastIncludedIdx)
     rf.nextIdx[server] = rf.matchIdx[server] + 1
+    DPrint("In sendInstallSnapshot, and I updated the server ", server, "matchIdx to ", rf.matchIdx[server], " and nextIdx to ", rf.nextIdx[server])
   }
 }

@@ -1,0 +1,1 @@
+Have there been any similar work where there is no driver? Where the workers can talk to each other and requests are submitted to any arbitary worker - I assume this would make the system faster (although probably more complex). 

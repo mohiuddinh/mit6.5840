@@ -24,7 +24,7 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	if !isLeader {
 		return -1, rf.currentTerm, isLeader
 	}
-
+  DPrint("In Start, I am ", rf.me, " received command ", command)
   rf.log = append(rf.log, LogInfo{Index: rf.getLastIdx() + 1, Term: rf.currentTerm, Command: command})
   rf.persist(false, nil)
 
@@ -66,6 +66,7 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.syncVar = sync.NewCond(&rf.mu)
 
   rf.readPersist(Persister.ReadRaftState())
+  DPrint("In make, creating server ", me)
 
   go rf.backgroundStateManager()
   go rf.backgroundApply()

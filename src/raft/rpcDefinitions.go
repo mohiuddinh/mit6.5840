@@ -26,7 +26,7 @@ type AppendEntriesRPCReply struct {
 type InstallSnapshotArgs struct {
   Term              int    
   LeaderId          int    
-  LastIncludedIdx int    
+  LastIncludedIdx   int    
   LastIncludedTerm  int    
   Snapshot          []byte 
 }
@@ -38,7 +38,7 @@ type InstallSnapshotReply struct {
 type RequestVoteArgs struct {
   Term         int 
   CandidateId  int 
-  LastLogIdx int 
+  LastLogIdx   int 
   LastLogTerm  int 
 }
 
