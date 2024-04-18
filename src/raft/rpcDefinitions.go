@@ -90,6 +90,8 @@ type Raft struct {
 
   voteCount int
   syncVar *sync.Cond 
+
+  newCommitCh chan struct{}
 }
 
 type LogInfo struct {

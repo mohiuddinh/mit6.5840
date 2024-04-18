@@ -4,11 +4,12 @@ import (
 	"sync"
 	"time"
 
-	"sort"
-
 	"6.5840/labgob"
 	"6.5840/labrpc"
 	"6.5840/raft"
+	// "fmt"
+	"math"
+	"sort"
 )
 
 
@@ -21,16 +22,8 @@ type ShardCtrler struct {
 	duplicateMap map[int64]Op 
 	outgoingCommands map[int]chan *Op 
 
-	configs []Config // indexed by config num
+	configs []Config
 }
-
-// type Command struct {
-// 	CommandID int 
-// 	Config Config 
-// 	Err Err 
-// 	WrongLeader bool 
-// 	ClerkID int64 
-// }
 
 type OpName string 
 const (
@@ -66,7 +59,7 @@ func (sc *ShardCtrler) isApplied(op Op) Op {
 	}
 	sc.mu.Unlock() 
 
-	index, _, isLeader := sc.rf.Start(op)
+	index, term, isLeader := sc.rf.Start(op)
 	if !isLeader {
 		command.WrongLeader = true 
 		return command 
@@ -80,15 +73,17 @@ func (sc *ShardCtrler) isApplied(op Op) Op {
 	select {
 	case response := <-outChan: 
 		command.Config = response.Config
-		if response.ClerkID != op.ClerkID || response.CommandID != op.CommandID {
+		command.WrongLeader = response.WrongLeader 
+		command.Err = response.Err 
+		currTerm, isCurrLeader := sc.rf.GetState()
+		if currTerm != term || !isCurrLeader {
 			command.WrongLeader = true 
-			return command 
-		} 
-		command.Err = OK 
-		command.WrongLeader = false  
+		}
+		DPrint("In isApplied, received op ", op, " and response is ", command )
 		return command 
 	case <-time.After(400*time.Millisecond): 
 		command.Err = TIMEOUT
+		DPrint("In isApplied (timed out!), received op ", op, " and response is ", command )
 		return command 
 	} 
 }
@@ -156,6 +151,7 @@ func (sc *ShardCtrler) applyLocally(op *Op) {
 		sc.moveShards(op.Shard, op.GID)
 	case QUERY: 
 		op.Config = sc.getConfig(op.Num)
+		// fmt.Println(sc.configs)
 	}
 	op.Err = OK 
 }
@@ -184,145 +180,57 @@ func (sc *ShardCtrler) moveShards(shard int, gid int) {
 }
 
 func (sc *ShardCtrler) getConfig(num int) Config {
-	if num <= 1 || num >= len(sc.configs) {
+	if num < 0 || num >= len(sc.configs) {
 		return sc.configs[len(sc.configs)-1]
 	}
 	return sc.configs[num]
 }
 
 func (sc *ShardCtrler) addServers(servers map[int][]string) {
-	if len(servers) == 0 { 
-		return 
+	if len(servers) == 0 {
+		return
 	}
-	oldConfig := sc.configs[len(sc.configs)-1]
-	copyGroups := sc.mapCopy(oldConfig.Groups)
+	lastCfg := sc.configs[len(sc.configs)-1]
+	groups := sc.mapCopy(lastCfg.Groups)
+	newGroups := addMap(groups, servers)
+	newShards := rebalanceShards(lastCfg.Shards, newGroups)
 
-	// add new elements to it 
-	for key, val := range servers {
-		copyGroups[key] = sc.arrCopy(val)
+	newCfg := Config{
+		Num:    lastCfg.Num + 1,
+		Shards: newShards,
+		Groups: newGroups,
 	}
-
-	shards := sc.loadBalanceShardsJoin(oldConfig.Shards, copyGroups)
-	latestConfig := Config{Shards: shards, Groups: copyGroups, Num: oldConfig.Num + 1}
-
-	sc.configs = append(sc.configs, latestConfig)
-}
-
-func (sc *ShardCtrler) loadBalanceShardsJoin(shards [NShards]int, groups map[int][]string) [NShards]int {
-	if len(groups) == 0 { 
-		return [NShards]int{}
-	}
-	// map that counts number of shards per GID 
-	gidToShard := make(map[int][]int)
-	for idx, gid := range shards {
-		if _, ok := gidToShard[gid]; !ok {
-			gidToShard[gid] = make([]int, 0)
-		}
-		gidToShard[gid] = append(gidToShard[gid], idx)
-	}
-
-	for { 
-		smallest := minGIDShard(gidToShard)
-		largest := maxGIDShard(gidToShard)
-		if smallest != 0 && len(gidToShard[smallest]) - len(gidToShard[largest]) <= 1 {
-			break 
-		}
-		gidToShard[largest] = gidToShard[largest][1:]
-		gidToShard[smallest] = append(gidToShard[smallest], gidToShard[largest][0])
-	}
-
-	var balancedShards [NShards]int
-	for gid, shards := range gidToShard {
-		for _, shard := range shards {
-			balancedShards[shard] = gid 
-		}
-	}
-	return balancedShards
+	sc.configs = append(sc.configs, newCfg)
 }
 
 func (sc *ShardCtrler) removeServers(gids []int) {
-	oldConfig := sc.configs[len(sc.configs)-1]
-	group, balancedShards := sc.loadBalanceShardsLeave(oldConfig.Shards, oldConfig.Groups, gids)
-	config := Config{Shards: balancedShards, Groups: group, Num: oldConfig.Num+1}
-	sc.configs = append(sc.configs, config)
-}
-
-func (sc *ShardCtrler) loadBalanceShardsLeave(shards [NShards]int, groups map[int][]string, gids []int) (map[int][]string, [NShards]int) {
-	// map that counts number of shards per GID 
-	copyGroups := sc.mapCopy(groups)
-	gidToShard := make(map[int][]int)
-	for idx, gid := range shards {
-		if _, ok := gidToShard[gid]; !ok {
-			gidToShard[gid] = make([]int, 0)
-		}
-		gidToShard[gid] = append(gidToShard[gid], idx)
+	if len(gids) == 0 {
+		return
 	}
 
-	openShards := make([]int, 0)
+	lastCfg := sc.configs[len(sc.configs)-1]
+	newGroups := sc.mapCopy(lastCfg.Groups)
+	shards := lastCfg.Shards
+
 	for _, gid := range gids {
-		if _, ok := copyGroups[gid]; ok {
-			delete(copyGroups, gid)
-		}
-		if val, ok := gidToShard[gid]; ok {
-			openShards = append(openShards, val...)
-			delete(gidToShard, gid)
-		}
-	}
-	var balancedShards [NShards]int 
-	if len(copyGroups) > 0 {
-		for _, shard := range openShards {
-			lowest := minGIDShard(gidToShard)
-			gidToShard[lowest] = append(gidToShard[lowest], shard)
-		}
-		for gid, shards := range gidToShard {
-			for _, shard := range shards {
-				balancedShards[shard] = gid 
+		for i, shard := range shards {
+			if shard == gid {
+				shards[i] = 0
 			}
 		}
+		delete(newGroups, gid)
 	}
 
-	return copyGroups, balancedShards
+	newShards := rebalanceShards(shards, newGroups)
+
+	newCfg := Config{
+		Num:    lastCfg.Num + 1,
+		Shards: newShards,
+		Groups: newGroups,
+	}
+
+	sc.configs = append(sc.configs, newCfg)
 }
-
-func minGIDShard(gidToShard map[int][]int) int {
-	gids := make([]int, len(gidToShard))
-	for gid := range gidToShard {
-		gids = append(gids, gid)
-	}
-	sort.Ints(gids)
-	bestIndex := -1 
-	smallest := NShards + 1 
-	for _, gid := range gids {
-		if gid != 0 && len(gidToShard[gid]) < smallest {
-			bestIndex = gid 
-			smallest = len(gidToShard[gid])
-		}
-	}
-	return bestIndex
-}
-
-func maxGIDShard(gidToShard map[int][]int) int {
-	// 0 is invalid and we need to assign everything to it 
-	val, ok := gidToShard[0]
-	if ok && len(val) > 0 {
-		return 0 
-	}
-	gids := make([]int, len(gidToShard))
-	for gid := range gidToShard {
-		gids = append(gids, gid)
-	}
-	sort.Ints(gids)
-	bestIndex := -1 
-	largest := -1 
-	for _, gid := range gids {
-		if len(gidToShard[gid]) > largest {
-			bestIndex = gid 
-			largest = len(gidToShard[gid])
-		}
-	}
-	return bestIndex
-}
-
 
 func (sc *ShardCtrler) arrCopy(this []string) []string {
 	copyArr := make([]string, len(this))
@@ -379,6 +287,7 @@ func StartServer(servers []*labrpc.ClientEnd, me int, persister *raft.Persister)
 
 	sc.configs = make([]Config, 1)
 	sc.configs[0].Groups = map[int][]string{}
+	sc.configs[0].Num = 0 
 
 	labgob.Register(Op{})
 	sc.applyCh = make(chan raft.ApplyMsg)
@@ -390,4 +299,86 @@ func StartServer(servers []*labrpc.ClientEnd, me int, persister *raft.Persister)
 	go sc.backgroundTask()
 
 	return sc
+}
+
+func addMap(m1 map[int][]string, m2 map[int][]string) map[int][]string {
+	for k2, v2 := range m2 {
+		m1[k2] = v2
+	}
+
+	return m1
+}
+
+func rebalanceShards(shardAllocations [NShards]int, nodeGroups map[int][]string) [NShards]int {
+	// If there are no groups, return an empty allocation.
+	if len(nodeGroups) == 0 {
+		return [NShards]int{}
+	}
+
+	// Create a map to track which shards are owned by each group.
+	groupShards := make(map[int][]int)
+	for groupID := range nodeGroups {
+		groupShards[groupID] = []int{}
+	}
+	for shardIndex, groupID := range shardAllocations {
+		groupShards[groupID] = append(groupShards[groupID], shardIndex)
+	}
+
+	// Function to identify the group with the least shards.
+	leastShardsGroup := func() int {
+		minGroupID := -1
+		minShardsCount := math.MaxInt32
+		groupList := sortedKeys(groupShards)
+		for _, groupID := range groupList {
+			if groupID != 0 && len(groupShards[groupID]) < minShardsCount {
+				minShardsCount = len(groupShards[groupID])
+				minGroupID = groupID
+			}
+		}
+		return minGroupID
+	}
+
+	// Function to identify the group with the most shards.
+	mostShardsGroup := func() int {
+		maxGroupID := -1
+		maxShardsCount := math.MinInt32
+		groupList := sortedKeys(groupShards)
+		for _, groupID := range groupList {
+			if groupID == 0 && len(groupShards[0]) > 0 {
+				return 0
+			}
+			if len(groupShards[groupID]) > maxShardsCount {
+				maxShardsCount = len(groupShards[groupID])
+				maxGroupID = groupID
+			}
+		}
+		return maxGroupID
+	}
+
+	for {
+		// Identify groups with the minimum and maximum shard count.
+		minGroupID, maxGroupID := leastShardsGroup(), mostShardsGroup()
+
+		// Check whether rebalancing is needed or not.
+		if maxGroupID != 0 && len(groupShards[maxGroupID])-len(groupShards[minGroupID]) <= 1 {
+			break 
+		}
+
+		// Transfer a shard from the group with most shards to the one with least shards.
+		shardToTransfer := groupShards[maxGroupID][0]
+		shardAllocations[shardToTransfer] = minGroupID
+		groupShards[maxGroupID] = groupShards[maxGroupID][1:]
+		groupShards[minGroupID] = append(groupShards[minGroupID], shardToTransfer)
+	}
+	return shardAllocations
+}
+
+// Helper function to return map keys sorted in increasing order.
+func sortedKeys(m map[int][]int) []int {
+	keys := make([]int, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Ints(keys)
+	return keys
 }

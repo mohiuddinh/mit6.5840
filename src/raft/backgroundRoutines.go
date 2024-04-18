@@ -1,4 +1,5 @@
 package raft
+// import "time"
 
 func (rf *Raft) backgroundStateManager() {
 	for !rf.killed() {

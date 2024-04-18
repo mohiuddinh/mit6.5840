@@ -1,5 +1,15 @@
 package shardctrler
 
+import "log"
+
+const debug = false 
+
+func DPrint(a ...interface{})  {
+	if debug {
+		log.Println(a...)
+	}
+}
+
 //
 // Shard controller: assigns shards to replication groups.
 //

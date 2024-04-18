@@ -45,9 +45,11 @@ func (ck *Clerk) Query(num int) Config {
 
 	for {
 		reply := &QueryReply{}
+		DPrint("Sending QUERY... ckID: ", ck.clerkID, "pollServer: ", pollServer, "Op: QUERY args: ", args)
 		ok := ck.servers[pollServer].Call("ShardCtrler.Query", args, reply)
 		if ok && !reply.WrongLeader && reply.Err != TIMEOUT {
 			ck.mu.Lock() 
+			DPrint("Received QUERY response... ckId: ", ck.clerkID, "pollServer: ", pollServer, "Op: QUERY args: ", args, " config: ", reply.Config)
 			ck.raftLeader = pollServer
 			ck.mu.Unlock() 
 			return reply.Config
@@ -65,9 +67,11 @@ func (ck *Clerk) Join(servers map[int][]string) {
 
 	for {
 		reply := &JoinReply{}
+		DPrint("Sending JOIN... ckID: ", ck.clerkID, "pollServer: ", pollServer, "Op: JOIN args: ", args)
 		ok := ck.servers[pollServer].Call("ShardCtrler.Join", args, reply)
 		if ok && !reply.WrongLeader && reply.Err != TIMEOUT {
 			ck.mu.Lock() 
+			DPrint("Received JOIN response... ckId: ", ck.clerkID, "pollServer: ", pollServer, "Op: JOIN args: ", args)
 			ck.raftLeader = pollServer
 			ck.mu.Unlock() 
 			return 
@@ -85,9 +89,11 @@ func (ck *Clerk) Leave(gids []int) {
 
 	for {
 		reply := &LeaveReply{}
+		DPrint("Sending LEAVE... ckID: ", ck.clerkID, "pollServer: ", pollServer, "Op: LEAVE args: ", args)
 		ok := ck.servers[pollServer].Call("ShardCtrler.Leave", args, reply)
 		if ok && !reply.WrongLeader && reply.Err != TIMEOUT {
 			ck.mu.Lock() 
+			DPrint("Received LEAVE response... ckId: ", ck.clerkID, "pollServer: ", pollServer, "Op: LEAVE args: ", args)
 			ck.raftLeader = pollServer
 			ck.mu.Unlock() 
 			return 
@@ -105,9 +111,11 @@ func (ck *Clerk) Move(shard int, gid int) {
 
 	for {
 		reply := &MoveReply{}
+		DPrint("Sending MOVE... ckID: ", ck.clerkID, "pollServer: ", pollServer, "Op: MOVE args: ", args)
 		ok := ck.servers[pollServer].Call("ShardCtrler.Move", args, reply)
 		if ok && !reply.WrongLeader && reply.Err != TIMEOUT {
 			ck.mu.Lock() 
+			DPrint("Received MOVE response... ckId: ", ck.clerkID, "pollServer: ", pollServer, "Op: MOVE args: ", args)
 			ck.raftLeader = pollServer
 			ck.mu.Unlock() 
 			return 

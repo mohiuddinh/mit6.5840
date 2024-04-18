@@ -129,6 +129,7 @@ func TestBasic(t *testing.T) {
 			cfg.ShutdownServer(s)
 			for i := 0; i < len(cfa); i++ {
 				c := ck.Query(cfa[i].Num)
+				// fmt.Println("IN TESTING: ", c, cfa[i])
 				check_same_config(t, c, cfa[i])
 			}
 			cfg.StartServer(s)

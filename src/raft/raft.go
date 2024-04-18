@@ -64,9 +64,10 @@ func Make(peers []*labrpc.ClientEnd, me int,
 
 	rf.voteCount = 0
 	rf.syncVar = sync.NewCond(&rf.mu)
+  rf.newCommitCh = make(chan struct{}, 1)
 
   rf.readPersist(Persister.ReadRaftState())
-  DPrint("In make, creating server ", me)
+  DPrint("In make, creating server ", rf.me)
 
   go rf.backgroundStateManager()
   go rf.backgroundApply()
