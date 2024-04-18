@@ -4,20 +4,14 @@ package shardctrler
 // Shardctrler clerk.
 //
 
-import (
-	"crypto/rand"
-	"math/big"
-	"sync"
-
-	"6.5840/labrpc"
-)
+import "6.5840/labrpc"
+import "time"
+import "crypto/rand"
+import "math/big"
 
 type Clerk struct {
 	servers []*labrpc.ClientEnd
-	clerkID int64
-	commandID int
-	mu sync.Mutex
-	raftLeader int 
+	// Your data here.
 }
 
 func nrand() int64 {
@@ -30,96 +24,78 @@ func nrand() int64 {
 func MakeClerk(servers []*labrpc.ClientEnd) *Clerk {
 	ck := new(Clerk)
 	ck.servers = servers
-	ck.clerkID = nrand() 
-	ck.raftLeader = 0
-	ck.commandID = 0
+	// Your code here.
 	return ck
 }
 
 func (ck *Clerk) Query(num int) Config {
-	ck.mu.Lock() 
-	pollServer := ck.raftLeader
-	args := &QueryArgs{Num: num, ClerkID: ck.clerkID, CommandID: ck.commandID}
-	ck.commandID++
-	ck.mu.Unlock() 
-
+	args := &QueryArgs{}
+	// Your code here.
+	args.Num = num
 	for {
-		reply := &QueryReply{}
-		DPrint("Sending QUERY... ckID: ", ck.clerkID, "pollServer: ", pollServer, "Op: QUERY args: ", args)
-		ok := ck.servers[pollServer].Call("ShardCtrler.Query", args, reply)
-		if ok && !reply.WrongLeader && reply.Err != TIMEOUT {
-			ck.mu.Lock() 
-			DPrint("Received QUERY response... ckId: ", ck.clerkID, "pollServer: ", pollServer, "Op: QUERY args: ", args, " config: ", reply.Config)
-			ck.raftLeader = pollServer
-			ck.mu.Unlock() 
-			return reply.Config
+		// try each known server.
+		for _, srv := range ck.servers {
+			var reply QueryReply
+			ok := srv.Call("ShardCtrler.Query", args, &reply)
+			if ok && reply.WrongLeader == false {
+				return reply.Config
+			}
 		}
-		pollServer = (pollServer + 1) % len(ck.servers)
+		time.Sleep(100 * time.Millisecond)
 	}
 }
 
 func (ck *Clerk) Join(servers map[int][]string) {
-	ck.mu.Lock() 
-	args := &JoinArgs{Servers: servers, ClerkID: ck.clerkID, CommandID: ck.commandID}
-	pollServer := ck.raftLeader
-	ck.commandID++
-	ck.mu.Unlock()
+	args := &JoinArgs{}
+	// Your code here.
+	args.Servers = servers
 
 	for {
-		reply := &JoinReply{}
-		DPrint("Sending JOIN... ckID: ", ck.clerkID, "pollServer: ", pollServer, "Op: JOIN args: ", args)
-		ok := ck.servers[pollServer].Call("ShardCtrler.Join", args, reply)
-		if ok && !reply.WrongLeader && reply.Err != TIMEOUT {
-			ck.mu.Lock() 
-			DPrint("Received JOIN response... ckId: ", ck.clerkID, "pollServer: ", pollServer, "Op: JOIN args: ", args)
-			ck.raftLeader = pollServer
-			ck.mu.Unlock() 
-			return 
+		// try each known server.
+		for _, srv := range ck.servers {
+			var reply JoinReply
+			ok := srv.Call("ShardCtrler.Join", args, &reply)
+			if ok && reply.WrongLeader == false {
+				return
+			}
 		}
-		pollServer = (pollServer + 1) % len(ck.servers)
+		time.Sleep(100 * time.Millisecond)
 	}
 }
 
 func (ck *Clerk) Leave(gids []int) {
-	ck.mu.Lock() 
-	args := &LeaveArgs{GIDs: gids, ClerkID: ck.clerkID, CommandID: ck.commandID}
-	pollServer := ck.raftLeader
-	ck.commandID++
-	ck.mu.Unlock()
+	args := &LeaveArgs{}
+	// Your code here.
+	args.GIDs = gids
 
 	for {
-		reply := &LeaveReply{}
-		DPrint("Sending LEAVE... ckID: ", ck.clerkID, "pollServer: ", pollServer, "Op: LEAVE args: ", args)
-		ok := ck.servers[pollServer].Call("ShardCtrler.Leave", args, reply)
-		if ok && !reply.WrongLeader && reply.Err != TIMEOUT {
-			ck.mu.Lock() 
-			DPrint("Received LEAVE response... ckId: ", ck.clerkID, "pollServer: ", pollServer, "Op: LEAVE args: ", args)
-			ck.raftLeader = pollServer
-			ck.mu.Unlock() 
-			return 
+		// try each known server.
+		for _, srv := range ck.servers {
+			var reply LeaveReply
+			ok := srv.Call("ShardCtrler.Leave", args, &reply)
+			if ok && reply.WrongLeader == false {
+				return
+			}
 		}
-		pollServer = (pollServer + 1) % len(ck.servers)
+		time.Sleep(100 * time.Millisecond)
 	}
 }
 
 func (ck *Clerk) Move(shard int, gid int) {
-	ck.mu.Lock() 
-	args := &MoveArgs{GID: gid, Shard: shard, ClerkID: ck.clerkID, CommandID: ck.commandID}
-	pollServer := ck.raftLeader
-	ck.commandID++
-	ck.mu.Unlock()
+	args := &MoveArgs{}
+	// Your code here.
+	args.Shard = shard
+	args.GID = gid
 
 	for {
-		reply := &MoveReply{}
-		DPrint("Sending MOVE... ckID: ", ck.clerkID, "pollServer: ", pollServer, "Op: MOVE args: ", args)
-		ok := ck.servers[pollServer].Call("ShardCtrler.Move", args, reply)
-		if ok && !reply.WrongLeader && reply.Err != TIMEOUT {
-			ck.mu.Lock() 
-			DPrint("Received MOVE response... ckId: ", ck.clerkID, "pollServer: ", pollServer, "Op: MOVE args: ", args)
-			ck.raftLeader = pollServer
-			ck.mu.Unlock() 
-			return 
+		// try each known server.
+		for _, srv := range ck.servers {
+			var reply MoveReply
+			ok := srv.Call("ShardCtrler.Move", args, &reply)
+			if ok && reply.WrongLeader == false {
+				return
+			}
 		}
-		pollServer = (pollServer + 1) % len(ck.servers)
+		time.Sleep(100 * time.Millisecond)
 	}
 }
